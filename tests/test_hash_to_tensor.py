@@ -1,10 +1,14 @@
+import io
 import unittest
+from time import sleep
+
 import redis
 import pandas as pd
+import numpy as np
 from app.ref_data_generator import DataGenerator
 
 
-class DataGeneratorTest(unittest.TestCase):
+class TestHashToTensor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Set up redis connection
@@ -16,29 +20,19 @@ class DataGeneratorTest(unittest.TestCase):
         # Remove classification
         del cls.df['Class']
         cls.dg = DataGenerator(cls.redis_conn, cls.df)
+        with open('../app/gear.py', 'rb') as f:
+            gear = f.read()
+            res = cls.redis_conn.execute_command('RG.PYEXECUTE', gear, 'REQUIREMENTS', 'numpy')
 
     def tearDown(self):
         self.redis_conn.flushall()
 
-    def test_data_generator_hashes(self):
+    def test_hashblob(self):
         self.dg.generate_data(1)
-        assert (self.redis_conn.exists(1))
         keys = self.redis_conn.zrange(1, 0, 1)
-        assert (len(keys) == 1)
         hash = self.redis_conn.hgetall(keys[0])
-        hash_keys = list(hash.keys())
-        for i in range(len(hash_keys)):
-            assert (hash_keys[i].decode() == self.df.columns[i])
-
-    def test_data_generator_sorted_sets(self):
-        self.dg.generate_data(1)
-        self.dg.generate_data(1)
-        keys = self.redis_conn.zrange(1, 0, 2)
-        assert (len(keys) == 2)
-        time_0 = self.redis_conn.hget(keys[0], 'Time')
-        time_1 = self.redis_conn.hget(keys[1], 'Time')
-        assert (time_0 > time_1)
-
-
+        tensor = self.redis_conn.execute_command("AI.TENSORGET", (keys[0].decode())+"_tensor", "BLOB")
+        nparray = np.frombuffer(tensor, dtype=np.float32)
+        assert(pd.Series(nparray).isin(np.array(list(hash.values()), dtype=np.float32)).any())
 if __name__ == '__main__':
     unittest.main()
