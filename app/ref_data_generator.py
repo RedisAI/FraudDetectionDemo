@@ -22,7 +22,7 @@ class DataGenerator:
             self._conn.zadd(user_id, {hash_key_name: timestamp})
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-u', '--users', help='Number of users in the system', type=int, default=100)
     parser.add_argument('-rs', '--redis_server', help='Redis URL', type=str, default='redis://127.0.0.1:6379')
