@@ -24,13 +24,14 @@ class TestHashToTensor(unittest.TestCase):
             gear = f.read()
             res = cls.redis_conn.execute_command('RG.PYEXECUTE', gear, 'REQUIREMENTS', 'numpy')
 
-    def tearDown(self):
-        self.redis_conn.flushall()
+    # def tearDown(self):
+    #     self.redis_conn.flushall()
 
     def test_hashblob(self):
         self.dg.generate_data(1)
         keys = self.redis_conn.zrange(1, 0, 1)
         hash = self.redis_conn.hgetall(keys[0])
+        print(keys[0].decode())
         tensor = self.redis_conn.execute_command("AI.TENSORGET", (keys[0].decode())+"_tensor", "BLOB")
         nparray = np.frombuffer(tensor, dtype=np.float32)
         assert(pd.Series(nparray).isin(np.array(list(hash.values()), dtype=np.float32)).any())

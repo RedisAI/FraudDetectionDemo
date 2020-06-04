@@ -1,0 +1,14 @@
+# 256-values reference tensor for the creaditfraud inference model.
+def concat_tensors(args):
+    # type: (List[Tensor]) -> Tensor
+    size = (1,256)
+    c = torch.cat(args).reshape((1,-1))
+    s = c.size()
+    if s == size:
+        return c
+    elif s[1] < size[1]:
+        res = torch.zeros(size)
+        res[0, :s[1]] = c.squeeze()
+        return res
+    else:
+        return c[0, :size[1]].unsqueeze(0)
