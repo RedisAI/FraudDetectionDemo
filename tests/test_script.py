@@ -10,7 +10,7 @@ class MyTestCase(unittest.TestCase):
         cls.redis_conn = redis.Redis(host="localhost", port="6379")
         if not cls.redis_conn.ping():
             raise Exception('Redis unavailable')
-        with open('script.torch', 'rb') as f:
+        with open('../app/script.torch', 'rb') as f:
             script = f.read()
             res = cls.redis_conn.execute_command('AI.SCRIPTSET', 'my_script', 'CPU', 'SOURCE', script)
             assert ('OK' == res.decode())
@@ -31,6 +31,11 @@ class MyTestCase(unittest.TestCase):
         assert ('OK' == res.decode())
         self.redis_conn.execute_command('RG.TRIGGER', 'addTensors')
         script_reply = np.frombuffer(self.redis_conn.execute_command("AI.TENSORGET", "script_reply", "BLOB"),
+                                     np.float32)
+
+        assert (np.all(np.equal(script_reply[0:30], tensor_a[0])))
+        assert (np.all(np.equal(script_reply[30:60], tensor_b[0])))
+        script_reply = np.frombuffer(self.redis_conn.execute_command("AI.TENSORGET", "script_reply_1", "BLOB"),
                                      np.float32)
 
         assert (np.all(np.equal(script_reply[0:30], tensor_a[0])))

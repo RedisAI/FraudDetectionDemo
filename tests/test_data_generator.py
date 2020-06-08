@@ -1,7 +1,7 @@
 import unittest
 import redis
 import pandas as pd
-from app.ref_data_generator import DataGenerator
+from app.demo import DataGenerator
 
 
 class DataGeneratorTest(unittest.TestCase):

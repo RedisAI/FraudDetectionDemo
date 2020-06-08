@@ -2,6 +2,8 @@
 def concat_tensors(args):
     # type: (List[Tensor]) -> Tensor
     size = (1,256)
+    if len(args) == 0:
+        return torch.zeros(size)
     c = torch.cat(args).reshape((1,-1))
     s = c.size()
     if s == size:

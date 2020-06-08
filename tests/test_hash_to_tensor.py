@@ -5,7 +5,7 @@ from time import sleep
 import redis
 import pandas as pd
 import numpy as np
-from app.ref_data_generator import DataGenerator
+from app.demo import DataGenerator
 
 
 class TestHashToTensor(unittest.TestCase):
