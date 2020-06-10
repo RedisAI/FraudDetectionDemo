@@ -1,11 +1,9 @@
-FROM redisfab/redistimeseries-bionic:edge-x64 as timeseries
-FROM redisfab/redisgears-bionic:1.0.0-x64 as gears
+FROM redisfab/redisgears:master-x64-bionic as gears
 FROM redisai/redisai:edge as ai
 
 ENV LD_LIBRARY_PATH /usr/lib/redis/modules
 
 COPY --from=gears /var/opt/redislabs/ /var/opt/redislabs/
-COPY --from=timeseries ${LD_LIBRARY_PATH}/*.so ${LD_LIBRARY_PATH}/
 
 # ENV PYTHONPATH /usr/lib/redis_dockers/modules/deps/cpython/Lib
 ENTRYPOINT ["redis-server"]

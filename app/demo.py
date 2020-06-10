@@ -54,7 +54,9 @@ def set_script(conn):
 def set_model(conn):
     with open('../app/models/creditcardfraud.pb', 'rb') as f:
         model = f.read()
-        res = conn.execute_command('AI.MODELSET', 'model', 'TF', 'CPU', 'INPUTS', 'transaction',
+        res = conn.execute_command('AI.MODELSET', 'model_1', 'TF', 'CPU', 'INPUTS', 'transaction',
+                                   'reference', 'OUTPUTS', 'output', 'BLOB', model)
+        res = conn.execute_command('AI.MODELSET', 'model_2', 'TF', 'CPU', 'INPUTS', 'transaction',
                                    'reference', 'OUTPUTS', 'output', 'BLOB', model)
 
 

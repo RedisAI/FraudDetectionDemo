@@ -1,0 +1,11 @@
+version: '3'
+services:
+  redis:
+    build: ./redis_dockers
+    ports:
+      - 6379:6379
+  init:
+    build: ./app
+    depends_on:
+      - redis
+    command: ['demo.py', '--redis_server', 'redis://redis:6379']
