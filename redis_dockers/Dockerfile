@@ -1,5 +1,5 @@
 FROM redisfab/redisgears:master-x64-bionic as gears
-FROM redisai/redisai:edge as ai
+FROM redisfab/redisai:master-cpu-x64-bionic as ai
 
 ENV LD_LIBRARY_PATH /usr/lib/redis/modules
 

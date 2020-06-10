@@ -17,7 +17,7 @@ class MyTestCase(unittest.TestCase):
 
         with open('torch_script_gear.py', 'rb') as f:
             gear = f.read()
-            res = cls.redis_conn.execute_command('RG.PYEXECUTE', gear)
+            res = cls.redis_conn.execute_command('RG.PYEXECUTE', gear, 'REQUIREMENTS', 'numpy')
             assert ('OK' == res.decode())
 
     def test_script(self):

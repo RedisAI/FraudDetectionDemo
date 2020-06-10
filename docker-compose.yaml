@@ -4,7 +4,7 @@ services:
     build: ./redis_dockers
     ports:
       - 6379:6379
-  init:
+  demo:
     build: ./app
     depends_on:
       - redis

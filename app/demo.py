@@ -63,7 +63,7 @@ def set_model(conn):
 def set_gear(conn):
     with open('gear.py', 'rb') as f:
         gear = f.read()
-        res = conn.execute_command('RG.PYEXECUTE', gear)
+        res = conn.execute_command('RG.PYEXECUTE', gear, 'REQUIREMENTS', 'numpy')
 
 
 if __name__ == '__main__':
