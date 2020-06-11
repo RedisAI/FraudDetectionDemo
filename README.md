@@ -1,5 +1,20 @@
 # FraudDetectionDemo
 
+This demo combines several [Redis](https://redis.io) data structures and [Redis Modules](https://redis.io/topics/modules-intro)
+to showcase the advantage of data locality during transaction scoring .
+
+It uses:
+
+* [RedisGears](https://oss.redislabs.com/redisgears/) to orchestrate the transactions and preprocessing the data
+* [RedisAI](https://oss.redislabs.com/redisai/) to preproces the data and run several AI models
+
+## Architecture
+### Flow 1: Updating reference data
+![Architecture](/flow1.png)
+### Flow 2: Transaction scoring
+![Architecture](/flow2.png)
+
+
 ## Running the Demo
 To run the demo:
 ```
