@@ -24,8 +24,14 @@ class DataGenerator:
                 key_names[timestamp] = 0
             hash_key_name = timestamp + '_' + str(key_names[timestamp])
             key_names[timestamp] = key_names[timestamp] + 1
+
+            # set reference raw data
             self._conn.hmset(hash_key_name, mapping=record)
+
+            # set converted reference data as a tensor
             dictToTensor(record,hash_key_name + "_tensor",self._conn)
+
+            # add key of reference to sorted set
             self._conn.zadd("references", {hash_key_name: timestamp})
 
 def dictToTensor(sample, keyname, conn):
