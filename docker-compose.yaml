@@ -13,3 +13,11 @@ services:
     image: redislabs/redisinsight:1.5.0
     ports:
       - "8001:8001"
+  loaddbtoinsight:
+    build: ./dbloader/.
+    depends_on:
+      - redisinsight
+      - redis
+    environment:
+      - APP_URL=http://redisinsight:8001
+    command: ['python', 'dbloader.py', "--db_urls=redis:6379"]
