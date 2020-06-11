@@ -1,7 +1,7 @@
 version: '3'
 services:
   redis:
-    build: ./redis_dockers
+    build: ./redis
     ports:
       - 6379:6379
   dataloader:
