@@ -94,10 +94,10 @@ if __name__ == '__main__':
 
     min_ts = df["Time"].min()
     max_ts = df["Time"].max()
-    while True:
-        # for i in range(10000):
-        min_sample_time = randrange(min_ts, max_ts)
-        max_sample_time = randrange(min_ts, max_ts)
-        if min_sample_time > max_sample_time:
-            min_sample_time, max_sample_time = max_sample_time, min_sample_time
-        predict(df, conn, min_sample_time, max_sample_time)
+
+    # Running a single execution
+    min_sample_time = randrange(min_ts, max_ts)
+    max_sample_time = randrange(min_ts, max_ts)
+    if min_sample_time > max_sample_time:
+        min_sample_time, max_sample_time = max_sample_time, min_sample_time
+    predict(df, conn, min_sample_time, max_sample_time)
