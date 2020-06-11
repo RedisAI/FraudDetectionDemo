@@ -19,4 +19,9 @@ jobs:
         git lfs install 
         git lfs fetch && git lfs checkout
     - name: Build the docker-compose image
-      run: docker-compose up
+      run: docker-compose up -d
+    - name: Sleep for 7 minutes
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '7m'
+      
