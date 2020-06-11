@@ -34,3 +34,6 @@ Open a second terminal for the video capturing:
 $ pip install -r example_client/requirements.txt
 $ python example_client/client.py
 ```
+Explore all data and RedisGears functions with RedisInsight
+
+https://localhost:8001
