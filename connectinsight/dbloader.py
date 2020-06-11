@@ -28,16 +28,15 @@ def make_add_db_api_call(name: str, host: str, port: int, session_token: str, cs
     """
     Make API call to add databases. Raises exception on error response.
     """
-    url = f"{APP_URL}/api/add-instance/?check_connection=true"
+    url = f"{APP_URL}/api/instance/"
     resp = requests.post(url=url,
                          cookies={'csrftoken': csrf_token,
                                   'sessionid': session_token},
                          headers={'X-CSRFToken': csrf_token},
-                         data={'host': host,
-                               'port': port,
-                               'password': None,
-                               "instance_name": host,
-                               "is_ssl": "false"})
+                         json={"name": host,
+                               "connectionType": "STANDALONE",
+                               'host': host,
+                               'port': port})
     if not resp.ok:
         raise Exception("Error response:\n" + resp.content.decode())
 
@@ -49,6 +48,7 @@ def add_dbs(db_urls: Iterable[str]):
     sessionid, csrftoken = load_credentials()
     for db_url in db_urls:
         host, port = db_url.split(':')
+        port = int(port)
         make_add_db_api_call(name=host, host=host, port=port, session_token=sessionid, csrf_token=csrftoken)
 
 
