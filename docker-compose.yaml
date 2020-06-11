@@ -4,16 +4,24 @@ services:
     build: ./redis_dockers
     ports:
       - 6379:6379
-  demo:
+  dataloader:
+    build: ./dataloader
+    depends_on:
+      - redis
+    command: ['load.py', '--redis_server', 'redis://redis:6379']
+  app:
     build: ./app
     depends_on:
       - redis
-    command: ['demo.py', '--redis_server', 'redis://redis:6379']
+      - dataloader
+    command: ['app.py', '--redis_server', 'redis://redis:6379']
   redisinsight:
     image: redislabs/redisinsight:1.5.0
+    depends_on:
+      - app
     ports:
       - "8001:8001"
-  loaddbtoinsight:
+  setupredisinsight:
     build: ./connectinsight/.
     depends_on:
       - redisinsight
