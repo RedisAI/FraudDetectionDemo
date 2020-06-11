@@ -17,11 +17,6 @@ class DataGenerator:
         records = self._df.to_dict('records')
         key_names = {}
 
-        #
-        # set an example transaction
-        #
-        dictToTensor(records[0],"transaction",self._conn)
-
         for record in records:
             timestamp = int(record['Time'])
             timestamp = str(timestamp)

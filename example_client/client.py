@@ -1,17 +1,24 @@
 import redis
 import argparse
 import time
+import numpy as np
 from random import randrange
 from urllib.parse import urlparse
 
 def predict(conn, min_ts, max_ts):
     start = time.time()
-    # TODO Set transaction
+
+    # set transaction tensor
+    values = np.random.randn(1, 30).astype(np.float32)
+    conn.execute_command("AI.TENSORSET", "transaction", "FLOAT", "1", "30", "BLOB", values.tobytes())
+
+    # run model
     conn.execute_command('RG.TRIGGER', 'is_fraud', str(min_ts), str(max_ts), "transaction")
+    # get result
+
     result = conn.execute_command('AI.TENSORGET','model_result','VALUES')
     print(result)
     print("Total execution took: " + str((time.time() - start) * 1000) + " ms")
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -24,7 +31,6 @@ if __name__ == '__main__':
     conn = redis.Redis(host=url.hostname, port=url.port)
     if not conn.ping():
         raise Exception('Redis unavailable')
-
 
     # TODO get min max from sorted set
     min_ts = 0
