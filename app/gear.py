@@ -3,7 +3,7 @@ import numpy as np
 
 
 def is_fraud(record):
-    # Retrive tensors from keyspace
+    # Retrieve tensors from keyspace
     # Range query with limit 100. (Without limit it can return 100-150K results which reduce performance)
     ref_data_keys = execute("ZRANGEBYSCORE", "transactions", record[1], record[2], "LIMIT", "0", "100")
     # Set "_tensor" suffix for every returned key
