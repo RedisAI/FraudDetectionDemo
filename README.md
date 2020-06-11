@@ -28,12 +28,15 @@ If something went wrong, e.g. you skipped installing git-lfs, you need to force 
 ```
 $ docker-compose up --force-recreate --build
 ```
+Explore all data and RedisGears functions with RedisInsight
+https://localhost:8001
 
-Open a second terminal for the video capturing:
+### Testing Flow 1
+
+
+### Testing Flow 2
+Open a second terminal to emulate the client connecting to redis:
 ```
 $ pip install -r example_client/requirements.txt
 $ python example_client/client.py
 ```
-Explore all data and RedisGears functions with RedisInsight
-
-https://localhost:8001
