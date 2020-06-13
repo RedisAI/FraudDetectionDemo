@@ -24,4 +24,8 @@ jobs:
       uses: jakejarvis/wait-action@master
       with:
         time: '7m'
+    - name: Test 
+      run: |
+        pip install -r example_client/requirements.txt
+        python example_client/client.py
       
