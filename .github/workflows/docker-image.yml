@@ -22,6 +22,6 @@ jobs:
       run: docker-compose up -d
     - name: Test 
       run: |
-        pip install -r example_client/requirements.txt
-        python example_client/client.py
+        pip3 install -r example_client/requirements.txt
+        python3 example_client/client.py
       
