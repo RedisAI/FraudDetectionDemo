@@ -33,7 +33,7 @@ Once a transation needs to be evaluated, we set it as a tensor in the keyspace w
 and a time range, represented by two timestamps. The gear then executes a range query over the sorted set (`ZRANGEBYSCORE`) 
 and retrieve a list of hash names (recall that each hash has a corresponding tensor).
 
-![Architecture](./flow3.png)
+![Gears<->Redis data gathering](./flow3.png "Gears<->Redis data gathering")
 
 From this list it extracts a list of tensor from the keyspace and sends it to a Torch script. This torch script creates a
 new tensor with the shape `(1, 256)` out of the list, by concatenating the tensors and either pad the remaining space or trimming it.
@@ -41,6 +41,7 @@ The new tensor is the reference data for the models which expect a reference dat
 with shape of `(1, 30)`. Onc the models are done, the gear uses `numpy` to aggregate the results and save them to a tensor
 with shape `(1, 2)` that contains the probability for the transaction to be a fraud.
 
+![Gears<->AI execution](./flow4.png "Gears<->AI execution")
 ## Running the Demo
 To run the demo:
 ```
