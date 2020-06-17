@@ -15,10 +15,31 @@ It uses:
 
 ## Architecture
 ### Flow 1: Updating reference data
-![Architecture](/flow1.png)
-### Flow 2: Transaction scoring
-![Architecture](/flow2.png)
+The user reference data is represented by a Redis sorted set mapping between reference transactions timestamps and the
+reference transaction key names. The reference transactions themselves, each stored as a Redis hash. 
 
+A gear is registered to listen to `SET` events of the `hash` type. This gear is mapping the hash into a tensor and sets
+it in the keyspace using `hashToTensor` function. Using `numpy`, this function serlizes the values of the hash into an
+`ndarray` with shape `(1, 30)`, creates a tensor object and sets it into the keyspace.
+
+
+![Updating reference data](./flow1.png "Updating reference data")
+
+
+### Flow 2: Transaction scoring
+![High level architecture](./flow2.png "High level architecture")
+
+Once a transation needs to be evaluated, we set it as a tensor in the keyspace with a shape of `(1, 30)` and trigger a gear with the tensor key name
+and a time range, represented by two timestamps. The gear then executes a range query over the sorted set (`ZRANGEBYSCORE`) 
+and retrieve a list of hash names (recall that each hash has a corresponding tensor).
+
+![Architecture](./flow3.png)
+
+From this list it extracts a list of tensor from the keyspace and sends it to a Torch script. This torch script creates a
+new tensor with the shape `(1, 256)` out of the list, by concatenating the tensors and either pad the remaining space or trimming it.
+The new tensor is the reference data for the models which expect a reference data with shape of `(1, 256)` and transaction data 
+with shape of `(1, 30)`. Onc the models are done, the gear uses `numpy` to aggregate the results and save them to a tensor
+with shape `(1, 2)` that contains the probability for the transaction to be a fraud.
 
 ## Running the Demo
 To run the demo:
