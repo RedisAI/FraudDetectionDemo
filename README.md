@@ -6,22 +6,22 @@
 # FraudDetectionDemo
 
 This demo combines several [Redis](https://redis.io) data structures and [Redis Modules](https://redis.io/topics/modules-intro)
-to showcase the advantage of data locality during transaction scoring .
+to showcase the advantage of data locality during transaction scoring.
 
 It uses:
 
 * [RedisGears](https://oss.redislabs.com/redisgears/) to orchestrate the transactions and preprocessing the data
-* [RedisAI](https://oss.redislabs.com/redisai/) to preproces the data and run several AI models
+* [RedisAI](https://oss.redislabs.com/redisai/) to preprocess the data and to run several DL/ML models
 
 ## Architecture
 ### Flow 1: Updating reference data
-The user reference data is represented by a Redis sorted set mapping between reference transactions timestamps and the
-reference transaction key names. The reference transactions themselves, each stored as a Redis hash. 
+Raw reference data is kept in Redis that can be fed as input to DL/ML models.  In order to save processing time during inferencing, the raw reference data is converted into tensors on each update.
 
-A gear is registered to listen to `SET` events of the `hash` type. This gear is mapping the hash into a tensor and sets
-it in the keyspace using `hashToTensor` function. Using `numpy`, this function serlizes the values of the hash into an
-`ndarray` with shape `(1, 30)`, creates a tensor object and sets it into the keyspace.
+The reference data for the transaction scoring is modelled as Redis Hashes. A sorted set keeps track of the keynames of these hashes sorted by time.
 
+A first RedisGears [function](https://oss.redislabs.com/redisgears/functions.html) is triggered on each update of the reference data. It registers to `SET` events of the type `hash`. This function itself is converting the hash into a tensor and stores it back into Redis (using the `hashToTensor` method).
+`numpy` is used in the function to serialise the values of the hash into an
+`ndarray` with a shape `(1, 30)` after which it's stored as a [RedisAI tensor](https://oss.redislabs.com/redisai/intro/#using-redisai-tensors).
 
 ![Updating reference data](./flow1.png "Updating reference data")
 
@@ -30,14 +30,14 @@ it in the keyspace using `hashToTensor` function. Using `numpy`, this function s
 ![High level architecture](./flow2.png "High level architecture")
 
 Once a transation needs to be evaluated, we set it as a tensor in the keyspace with a shape of `(1, 30)` and trigger a gear with the tensor key name
-and a time range, represented by two timestamps. The gear then executes a range query over the sorted set (`ZRANGEBYSCORE`) 
+and a time range, represented by two timestamps. The gear then executes a range query over the sorted set (`ZRANGEBYSCORE`)
 and retrieve a list of hash names (recall that each hash has a corresponding tensor).
 
 ![Gears<->Redis data gathering](./flow3.png "Gears<->Redis data gathering")
 
 From this list it extracts a list of tensor from the keyspace and sends it to a Torch script. This torch script creates a
 new tensor with the shape `(1, 256)` out of the list, by concatenating the tensors and either pad the remaining space or trimming it.
-The new tensor is the reference data for the models which expect a reference data with shape of `(1, 256)` and transaction data 
+The new tensor is the reference data for the models which expect a reference data with shape of `(1, 256)` and transaction data
 with shape of `(1, 30)`. Onc the models are done, the gear uses `numpy` to aggregate the results and save them to a tensor
 with shape `(1, 2)` that contains the probability for the transaction to be a fraud.
 
