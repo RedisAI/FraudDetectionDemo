@@ -10,7 +10,7 @@ to showcase the advantage of data locality during transaction scoring.
 
 It uses:
 
-* [RedisGears](https://oss.redislabs.com/redisgears/) to orchestrate the transactions and preprocessing the data
+* [RedisGears](https://oss.redislabs.com/redisgears/) to orchestrate the transactions and preprocessing the data by means of [functions](https://oss.redislabs.com/redisgears/functions.html)
 * [RedisAI](https://oss.redislabs.com/redisai/) to preprocess the data and to run several DL/ML models
 
 ## Architecture
@@ -19,7 +19,7 @@ Raw reference data is kept in Redis that can be fed as input to DL/ML models.  I
 
 The reference data for the transaction scoring is modelled as Redis Hashes. A sorted set keeps track of the keynames of these hashes sorted by time.
 
-A first RedisGears [function](https://oss.redislabs.com/redisgears/functions.html) is triggered on each update of the reference data. It registers to `SET` events of the type `hash`. This function itself is converting the hash into a tensor and stores it back into Redis (using the `hashToTensor` method).
+A [first RedisGears function](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/gear.py#L47) is triggered on each update of the reference data. It registers to `SET` events of the type `hash`. This function itself is converting the hash into a tensor and stores it back into Redis (using the `hashToTensor` method).
 `numpy` is used in the function to serialise the values of the hash into an
 `ndarray` with a shape `(1, 30)` after which it's stored as a [RedisAI tensor](https://oss.redislabs.com/redisai/intro/#using-redisai-tensors).
 
@@ -27,18 +27,21 @@ A first RedisGears [function](https://oss.redislabs.com/redisgears/functions.htm
 
 
 ### Flow 2: Transaction scoring
+When a new transaction happens, it needs to be evaluated if it's fraudulent or not.  The ML/DL models take two inputs for this, relevant reference and the new transaction details.  RedisGears will orchestrate the fetching of the relevant reference data and creating a single input tensor out of it.  Afterwards it will execute several inferences using TensorFlow models hosted inside Redis and combine the results to reply the transaction scoring result.
+
 ![High level architecture](./flow2.png "High level architecture")
 
-Once a transation needs to be evaluated, we set it as a tensor in the keyspace with a shape of `(1, 30)` and trigger a gear with the tensor key name
-and a time range, represented by two timestamps. The gear then executes a range query over the sorted set (`ZRANGEBYSCORE`)
-and retrieve a list of hash names (recall that each hash has a corresponding tensor).
+An input tensor is set in the keyspace with the shape of `(1, 30)`. A second RedisGears function is triggered with as input
+- the keyname holding the new transaction details tensor
+- a time range, represented by two timestamps.
+
+The function then executes a range query over the sorted set ([`ZRANGEBYSCORE`](https://redis.io/commands/zrangebyscore)) and retrieves a list of hash names (recall that each hash has a corresponding tensor as described in Flow 1).
 
 ![Gears<->Redis data gathering](./flow3.png "Gears<->Redis data gathering")
 
-From this list it extracts a list of tensor from the keyspace and sends it to a Torch script. This torch script creates a
-new tensor with the shape `(1, 256)` out of the list, by concatenating the tensors and either pad the remaining space or trimming it.
-The new tensor is the reference data for the models which expect a reference data with shape of `(1, 256)` and transaction data
-with shape of `(1, 30)`. Onc the models are done, the gear uses `numpy` to aggregate the results and save them to a tensor
+From this list it extracts a list of tensors from the keyspace and sends it to a [Torch script](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/script.torch). This torch script creates a
+new tensor with the shape `(1, 256)`, by concatenating the tensors and either pad the remaining space or trimming it.
+The new tensor is the reference data for the models which expect a reference data with shape of `(1, 256)` and transaction details tensor with the shape of `(1, 30)`. Once the inferencing of the models are done, the function uses `numpy` to aggregate the results and save them to a tensor
 with shape `(1, 2)` that contains the probability for the transaction to be a fraud.
 
 ![Gears<->AI execution](./flow4.png "Gears<->AI execution")
