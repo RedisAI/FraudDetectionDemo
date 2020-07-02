@@ -6,7 +6,6 @@ import numpy as np
 from random import randrange
 from urllib.parse import urlparse
 
-
 class DataGenerator:
     def __init__(self, conn, df):
         self._conn = conn

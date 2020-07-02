@@ -45,6 +45,7 @@ The new tensor is the reference data for the models which expect a reference dat
 with shape `(1, 2)` that contains the probability for the transaction to be a fraud.
 
 ![Gears<->AI execution](./flow4.png "Gears<->AI execution")
+
 ## Running the Demo
 To run the demo:
 ```
@@ -58,15 +59,59 @@ If something went wrong, e.g. you skipped installing git-lfs, you need to force 
 ```
 $ docker-compose up --force-recreate --build
 ```
-Explore all data and RedisGears functions with RedisInsight
-https://localhost:8001
 
-### Testing Flow 1
+### Explore loaded reference data
+This demo comes with a RedisInsight container which is a GUI for Redis. Open the browser at https://localhost:8001.
 
+In the CLI update execute following command
+```bash
+>> dbsize
+(integer) 2004
+```
+The 2004 keys make up for
+- 1000 raw reference data points
+- 1000 tensor representations of these raw data points
+- 1 sorted set
+- 1 script TODO link
+- 2 models TODO link
 
-### Testing Flow 2
+### Exploring Flow 1
+Select a key of a hash containing reference data in the browser and go back to the CLI.
+The following three commands will prove that the tensor reprentation of the raw data is always kept in sync by RedisGears.
+1. `debug object 478_2_tensor` will allow you to inspect the last time the key was touched `lru_seconds_idle`.
+1. Update a field in the raw data via the `HSET` command.
+1. Debug the object again and notice that the `lru_seconds_idle` has now been updated.
+
+```
+>> debug object 478_2_tensor
+"Value at:0x7f915600dc10 refcount:1 encoding:raw serializedlength:146 lru:16636612 lru_seconds_idle:69"
+>> hset 478_2 Amount 123
+(integer) 0
+>> debug object 478_2_tensor
+"Value at:0x7f915600dc20 refcount:1 encoding:raw serializedlength:146 lru:16636690 lru_seconds_idle:2"
+```
+![Demo Flow 1 CLI](./demo_flow1_cli.png "Demo Flow 1 CLI")
+
+When we inspect the Function in the RedisGears tool we can verify that the function was triggered exactly once.
+
+![Demo Flow 1 RedisGears](./demo_flow1_gears.png "Demo Flow 1 RedisGears")
+
+### Exploring Flow 2
 Open a second terminal to emulate the client connecting to redis:
 ```
 $ pip install -r example_client/requirements.txt
 $ python example_client/client.py
 ```
+This client will execute 3 commands to redis.
+1. `AI.TENSORSET` will set the transaction input data for the model.
+1. `RG.TRIGGER` will trigger the second Function that will orchestrate Flow 2.
+1. `AI.TENSORGET` will fetch the output result of the Function.
+
+```bash
+$ python3 example_client/client.py
+[b'0.11767192184925079', b'0.8823280930519104']
+Total execution took: 9.902238845825195 ms
+```
+
+![Demo Flow 2 Gears](./demo_flow2_gears.png "Demo Flow 2 RedisGears")
+![Demo Flow 2 CLI](./demo_flow2_output.png "Demo Flow 2 CLI")
