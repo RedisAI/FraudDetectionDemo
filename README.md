@@ -60,6 +60,16 @@ If something went wrong, e.g. you skipped installing git-lfs, you need to force 
 $ docker-compose up --force-recreate --build
 ```
 
+The `app` container will [load](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/app.py)
+- The [two tensorflow models](https://github.com/RedisAI/FraudDetectionDemo/tree/master/app/models)
+- The [Torch script](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/script.torch)
+- The RedisGears functions
+
+The `dataloader` container will [load](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py)
+- 1000 [raw reference data points](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L29)
+- 1000 [tensor](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L32) representations of these raw data points
+- 1 [sorted set](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L35)
+
 ### Explore loaded reference data
 This demo comes with a RedisInsight container which is a GUI for Redis. Open the browser at https://localhost:8001.
 
@@ -72,8 +82,8 @@ The 2004 keys make up for
 - 1000 raw reference data points
 - 1000 tensor representations of these raw data points
 - 1 sorted set
-- 1 script TODO link
-- 2 models TODO link
+- 1 Torch script
+- 2 Tensorflow models
 
 ### Exploring Flow 1
 Select a key of a hash containing reference data in the browser and go back to the CLI.
