@@ -27,7 +27,7 @@ A [first RedisGears function](https://github.com/RedisAI/FraudDetectionDemo/blob
 
 
 ### Flow 2: Transaction scoring
-When a new transaction happens, it needs to be evaluated if it's fraudulent or not.  The ML/DL models take two inputs for this, relevant reference and the new transaction details.  RedisGears will orchestrate the fetching of the relevant reference data and creating a single input tensor out of it.  Afterwards it will execute several inferences using TensorFlow models hosted inside Redis and combine the results to reply the transaction scoring result.
+When a new transaction happens, it needs to be evaluated if it's fraudulent or not.  The ML/DL models take two inputs for this, the relevant reference data and the new transaction details.  RedisGears will orchestrate the fetching of the relevant reference data and creating a single input tensor out of it via a Torch Script.  Afterwards it will execute several inferences using TensorFlow models hosted inside Redis and combine the results to reply the transaction scoring result.
 
 ![High level architecture](./flow2.png "High level architecture")
 
@@ -71,13 +71,14 @@ The `dataloader` container will [load](https://github.com/RedisAI/FraudDetection
 - 1 [sorted set](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L35)
 
 ### Explore loaded reference data
-This demo comes with a RedisInsight container which is a GUI for Redis. Open the browser at https://localhost:8001.
+This demo bundles a [RedisInsight](https://redislabs.com/redisinsight/) container which is an intuitive GUI for Redis. Open a browser and point it at https://localhost:8001 and select the preloaded redis connection.
 
-In the CLI update execute following command
+In the CLI tool, execute the following command:
 ```bash
 >> dbsize
 (integer) 2004
 ```
+
 The 2004 keys make up for
 - 1000 raw reference data points
 - 1000 tensor representations of these raw data points
@@ -86,9 +87,14 @@ The 2004 keys make up for
 - 2 Tensorflow models
 
 ### Exploring Flow 1
-Select a key of a hash containing reference data in the browser and go back to the CLI.
-The following three commands will prove that the tensor reprentation of the raw data is always kept in sync by RedisGears.
-1. `debug object 478_2_tensor` will allow you to inspect the last time the key was touched `lru_seconds_idle`.
+Select a key of a hash containing reference data in the Browser Tool and go back to the CLI. Notice that the commands will execute use two different keys:
+
+- `478_2` the raw reference data.
+- `478_2_tensor` the tensor counterpart of this raw reference data.
+
+The following three commands will demonstrate that the tensor representation of the raw data is always kept in sync by RedisGears.  
+
+1. `debug object 478_2_tensor` will allow you to inspect the last time the tensor key was touched (`lru_seconds_idle`).
 1. Update a field in the raw data via the `HSET` command.
 1. Debug the object again and notice that the `lru_seconds_idle` has now been updated.
 
@@ -107,12 +113,12 @@ When we inspect the Function in the RedisGears tool we can verify that the funct
 ![Demo Flow 1 RedisGears](./demo_flow1_gears.png "Demo Flow 1 RedisGears")
 
 ### Exploring Flow 2
-Open a second terminal to emulate the client connecting to redis:
+Open a second terminal to emulate a client application connecting to redis:
 ```
 $ pip install -r example_client/requirements.txt
 $ python example_client/client.py
 ```
-This client will execute 3 commands to redis.
+This client will execute 3 commands to redis that simulate the transaction scoring:
 1. `AI.TENSORSET` will set the transaction input data for the model.
 1. `RG.TRIGGER` will trigger the second Function that will orchestrate Flow 2.
 1. `AI.TENSORGET` will fetch the output result of the Function.
