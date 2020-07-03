@@ -32,9 +32,8 @@ if __name__ == '__main__':
     if not conn.ping():
         raise Exception('Redis unavailable')
 
-    # TODO get min max from sorted set
-    min_ts = 0
-    max_ts = 500
+    min_ts = conn.zrangebyscore("references", "-inf", "+inf", withscores=True, start=0, num=1)[0][1]
+    max_ts = conn.zrevrangebyscore("references", "+inf", "-inf", withscores=True, start=0, num=1)[0][1]
 
     # Running a single execution
     min_sample_time = randrange(min_ts, max_ts)

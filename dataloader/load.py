@@ -6,7 +6,6 @@ import numpy as np
 from random import randrange
 from urllib.parse import urlparse
 
-
 class DataGenerator:
     def __init__(self, conn, df):
         self._conn = conn
@@ -44,6 +43,7 @@ def dictToTensor(sample, keyname, conn):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-rs', '--redis_server', help='Redis URL', type=str, default='redis://127.0.0.1:6379')
+    parser.add_argument('-n', '--nrows', help='Number of rows to read from input file', type=str, default=1000)
 
     args = parser.parse_args()
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     if not conn.ping():
         raise Exception('Redis unavailable')
     # Read csv file
-    df = pd.read_csv("data/creditcard.csv", nrows=1000)
+    df = pd.read_csv("data/creditcard.csv", nrows=args.nrows)
     # Remove classification
     del df['Class']
     # Load reference data
