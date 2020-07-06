@@ -54,6 +54,6 @@ def hashToTensor(record):
     redisAI.setTensorInKey(hash_key + '_tensor', tensor)
 
 
-GearsBuilder('KeysReader').map(hashToTensor).register(prefix='*', eventType='Set', keyTypes=['hash'])
+GearsBuilder('KeysReader', desc="Map Hash to Tensor").map(hashToTensor).register(prefix='*', eventType='Set', keyTypes=['hash'])
 
-GearsBuilder('CommandReader').map(is_fraud).register(trigger='is_fraud')
+GearsBuilder('CommandReader', desc="Trigger to determine if fradulent").map(is_fraud).register(trigger='is_fraud')

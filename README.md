@@ -115,8 +115,8 @@ When we inspect the Function in the RedisGears tool we can verify that the funct
 ### Exploring Flow 2
 Open a second terminal to emulate a client application connecting to redis:
 ```
-$ pip install -r example_client/requirements.txt
-$ python example_client/client.py
+$ pip3 install -r example_client/requirements.txt
+$ python3 example_client/client.py
 ```
 This client will execute 3 commands to redis that simulate the transaction scoring:
 1. `AI.TENSORSET` will set the transaction input data for the model.
