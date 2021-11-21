@@ -4,28 +4,28 @@ services:
     build: ./redis
     ports:
       - 6379:6379
-  dataloader:
-    build: ./dataloader
-    depends_on:
-      - redis
-    command: ['load.py', '--redis_server', 'redis://redis:6379']
-  app:
-    build: ./app
-    depends_on:
-      - redis
-      - dataloader
-    command: ['app.py', '--redis_server', 'redis://redis:6379']
-  redisinsight:
-    image: redislabs/redisinsight:1.6.0
-    depends_on:
-      - app
-    ports:
-      - "8001:8001"
-  setupredisinsight:
-    build: ./connectinsight/.
-    depends_on:
-      - redisinsight
-      - redis
-    environment:
-      - APP_URL=http://redisinsight:8001
-    command: ['python', 'dbloader.py', "--db_urls=redis:6379"]
+#  dataloader:
+#    build: ./dataloader
+#    depends_on:
+#      - redis
+#    command: ['load.py', '--redis_server', 'redis://redis:6379']
+#  app:
+#    build: ./app
+#    depends_on:
+#      - redis
+#      - dataloader
+#    command: ['app.py', '--redis_server', 'redis://redis:6379']
+#  redisinsight:
+#    image: redislabs/redisinsight:1.6.0
+#    depends_on:
+#      - app
+#    ports:
+#      - "8001:8001"
+#  setupredisinsight:
+#    build: ./connectinsight/.
+#    depends_on:
+#      - redisinsight
+#      - redis
+#    environment:
+#      - APP_URL=http://redisinsight:8001
+#    command: ['python', 'dbloader.py', "--db_urls=redis:6379"]
