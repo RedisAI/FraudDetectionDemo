@@ -14,7 +14,6 @@ def predict(conn, min_ts, max_ts):
 
     # Find the relevant reference data (transaction that occurred within the time interval)
     ref_data_keys = conn.zrangebyscore("references", min_ts, max_ts)
-    print(ref_data_keys)
 
     # Create a DAG (execution plan) for RedisAI. First, use the helper script to convert the reference data
     # within the hashes into a tensor. Then run the 2 models and obtain 2 outputs,
@@ -22,7 +21,7 @@ def predict(conn, min_ts, max_ts):
     output_key_name = 'result{1}'
     dag = conn.dag(persist=[output_key_name])
     dag.tensorset('transaction', transaction_tensor)
-    dag.scriptexecute('helper_script', 'hash_to_tensors', keys=[ref_data_keys], outputs=['reference'])
+    dag.scriptexecute('helper_script', 'hashes_to_tensor', keys=ref_data_keys, outputs=['reference'])
     dag.modelexecute('model_1', inputs=['transaction', 'reference'], outputs=['out_1'])
     dag.modelexecute('model_2', inputs=['transaction', 'reference'], outputs=['out_2'])
     dag.scriptexecute('helper_script', 'post_processing', inputs=['out_1', 'out_2'], outputs=[output_key_name])
@@ -30,8 +29,7 @@ def predict(conn, min_ts, max_ts):
 
     # get result
     result = conn.tensorget(output_key_name)
-    # result = conn.execute_command('AI.TENSORGET','model_result','VALUES')
-    print("result: ", result)
+    print("result: ", result[0])
     print("Total execution took: " + str((time.time() - start) * 1000) + " ms")
 
 

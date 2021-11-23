@@ -15,17 +15,17 @@ services:
       - redis
       - dataloader
     command: ['app.py', '--redis_server', 'redis://redis:6379']
-#  redisinsight:
-#    image: redislabs/redisinsight:1.6.0
-#    depends_on:
-#      - app
-#    ports:
-#      - "8001:8001"
-#  setupredisinsight:
-#    build: ./connectinsight/.
-#    depends_on:
-#      - redisinsight
-#      - redis
-#    environment:
-#      - APP_URL=http://redisinsight:8001
-#    command: ['python', 'dbloader.py', "--db_urls=redis:6379"]
+  redisinsight:
+    image: redislabs/redisinsight:1.6.0
+    depends_on:
+      - app
+    ports:
+      - "8001:8001"
+  setupredisinsight:
+    build: ./connectinsight/.
+    depends_on:
+      - redisinsight
+      - redis
+    environment:
+      - APP_URL=http://redisinsight:8001
+    command: ['python', 'dbloader.py', "--db_urls=redis:6379"]

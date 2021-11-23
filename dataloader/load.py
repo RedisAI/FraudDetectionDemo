@@ -6,6 +6,7 @@ import numpy as np
 from random import randrange
 from urllib.parse import urlparse
 
+
 class DataGenerator:
     def __init__(self, conn, df):
         self._conn = conn
@@ -26,18 +27,10 @@ class DataGenerator:
             key_names[timestamp] = key_names[timestamp] + 1
 
             # set reference raw data
-            self._conn.hmset(hash_key_name, mapping=record)
+            self._conn.hset(hash_key_name, mapping=record)
 
             # add key of reference to sorted set
             self._conn.zadd("references", {hash_key_name: timestamp})
-
-
-def dictToTensor(sample, keyname, conn):
-    values = np.empty((1, 30), dtype=np.float32)
-    for i, key in enumerate(sample.keys()):
-        value = sample[key]
-        values[0][i] = value
-    conn.execute_command("AI.TENSORSET", keyname, "FLOAT", "1", "30", "BLOB", values.tobytes())
 
 
 if __name__ == '__main__':

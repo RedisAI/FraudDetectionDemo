@@ -25,9 +25,9 @@ def hashes_to_tensor(tensors: List[Tensor], keys: List[str], args: List[str]):
     # Get the hashes from redis
     tensors = []
     for key in keys:
-        hash_hash_values = redis.asList(redis.execute("HVALS", key))
+        hash_values = redis.asList(redis.execute("HVALS", key))
         # convert every value in the hash to a torch tensor, and concatenate them to a single tensor
-        tensor = [torch.tensor(int(str(v))).reshape(1, 1) for v in hash_hash_values]
+        tensor = [torch.tensor(float(str(v))).reshape(1, 1) for v in hash_values]
         tensors.append(torch.cat(tensor, dim=0))
 
     return create_ref_tensor(tensors)
