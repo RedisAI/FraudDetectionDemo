@@ -10,7 +10,7 @@ class MyTestCase(unittest.TestCase):
         cls.redis_conn = redis.Redis(host="localhost", port="6379")
         if not cls.redis_conn.ping():
             raise Exception('Redis unavailable')
-        with open('../app/script.torch', 'rb') as f:
+        with open('../app/script.py', 'rb') as f:
             script = f.read()
             res = cls.redis_conn.execute_command('AI.SCRIPTSET', 'my_script', 'CPU', 'SOURCE', script)
             assert ('OK' == res.decode())

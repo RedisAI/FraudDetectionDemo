@@ -21,17 +21,16 @@ class DataGenerator:
             timestamp = str(timestamp)
             if timestamp not in key_names:
                 key_names[timestamp] = 0
+            # Use a unique key name, which is '<time_stamp>_<index>'
             hash_key_name = timestamp + '_' + str(key_names[timestamp])
             key_names[timestamp] = key_names[timestamp] + 1
 
             # set reference raw data
             self._conn.hmset(hash_key_name, mapping=record)
 
-            # set converted reference data as a tensor
-            dictToTensor(record,hash_key_name + "_tensor",self._conn)
-
             # add key of reference to sorted set
             self._conn.zadd("references", {hash_key_name: timestamp})
+
 
 def dictToTensor(sample, keyname, conn):
     values = np.empty((1, 30), dtype=np.float32)
@@ -39,6 +38,7 @@ def dictToTensor(sample, keyname, conn):
         value = sample[key]
         values[0][i] = value
     conn.execute_command("AI.TENSORSET", keyname, "FLOAT", "1", "30", "BLOB", values.tobytes())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

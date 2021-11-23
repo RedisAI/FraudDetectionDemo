@@ -4,17 +4,17 @@ services:
     build: ./redis
     ports:
       - 6379:6379
-#  dataloader:
-#    build: ./dataloader
-#    depends_on:
-#      - redis
-#    command: ['load.py', '--redis_server', 'redis://redis:6379']
-#  app:
-#    build: ./app
-#    depends_on:
-#      - redis
-#      - dataloader
-#    command: ['app.py', '--redis_server', 'redis://redis:6379']
+  dataloader:
+    build: ./dataloader
+    depends_on:
+      - redis
+    command: ['load.py', '--redis_server', 'redis://redis:6379']
+  app:
+    build: ./app
+    depends_on:
+      - redis
+      - dataloader
+    command: ['app.py', '--redis_server', 'redis://redis:6379']
 #  redisinsight:
 #    image: redislabs/redisinsight:1.6.0
 #    depends_on:

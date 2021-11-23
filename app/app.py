@@ -8,23 +8,19 @@ from urllib.parse import urlparse
 
 
 def set_script(conn):
-    with open('script.torch', 'rb') as f:
+    with open('script.py', 'rb') as f:
         script = f.read()
-        res = conn.execute_command('AI.SCRIPTSET', 'concat_script', 'CPU', 'SOURCE', script)
+        res = conn.execute_command('AI.SCRIPTSTORE', 'helper_script', 'CPU',
+                                   'ENTRY_POINTS', 2, 'hashes_to_tensor', 'post_processing', 'SOURCE', script)
 
 
 def set_model(conn):
     with open('../app/models/creditcardfraud.pb', 'rb') as f:
         model = f.read()
-        res = conn.execute_command('AI.MODELSET', 'model_1', 'TF', 'CPU', 'INPUTS', 'transaction',
-                                   'reference', 'OUTPUTS', 'output', 'BLOB', model)
-        res = conn.execute_command('AI.MODELSET', 'model_2', 'TF', 'CPU', 'INPUTS', 'transaction',
-                                   'reference', 'OUTPUTS', 'output', 'BLOB', model)
-
-def set_gear(conn):
-    with open('gear.py', 'rb') as f:
-        gear = f.read()
-        res = conn.execute_command('RG.PYEXECUTE', gear, 'REQUIREMENTS', 'numpy')
+        res = conn.execute_command('AI.MODELSTORE', 'model_1', 'TF', 'CPU', 'INPUTS', 2, 'transaction',
+                                   'reference', 'OUTPUTS', 1, 'output', 'BLOB', model)
+        res = conn.execute_command('AI.MODELSTORE', 'model_2', 'TF', 'CPU', 'INPUTS', 2, 'transaction',
+                                   'reference', 'OUTPUTS', 1, 'output', 'BLOB', model)
 
 
 if __name__ == '__main__':
@@ -43,5 +39,3 @@ if __name__ == '__main__':
     set_script(conn)
     # Set model
     set_model(conn)
-    # Set gear
-    set_gear(conn)

@@ -1,4 +1,5 @@
 import redis
+from redisai import Client
 import argparse
 import time
 import numpy as np
@@ -8,27 +9,35 @@ from urllib.parse import urlparse
 def predict(conn, min_ts, max_ts):
     start = time.time()
 
-    # set transaction tensor
-    values = np.random.randn(1, 30).astype(np.float32)
-    conn.execute_command("AI.TENSORSET", "transaction", "FLOAT", "1", "30", "BLOB", values.tobytes())
+    # Create a random transaction tensor
+    transaction_tensor = np.random.randn(1, 30).astype(np.float32)
 
-    # run model
-    conn.execute_command('RG.TRIGGER', 'is_fraud', str(min_ts), str(max_ts), "transaction")
+    # Find the relevant reference data (transaction that occurred within the time interval)
+    ref_data_keys = conn.zrangebyscore("references", min_ts, max_ts)
+    print(ref_data_keys)
+
+    # Create a DAG (execution plan) for RedisAI. First, use the helper script to convert the reference data
+    # within the hashes into a tensor. Then run the 2 models and obtain 2 outputs,
+    # and finally use the helper script to take their average to be the result (and persist it in key space)
+    output_key_name = 'result{1}'
+    dag = conn.dag(persist=[output_key_name])
+    dag.tensorset('transaction', transaction_tensor)
+    dag.scriptexecute('helper_script', 'hash_to_tensors', keys=[ref_data_keys], outputs=['reference'])
+    dag.modelexecute('model_1', inputs=['transaction', 'reference'], outputs=['out_1'])
+    dag.modelexecute('model_2', inputs=['transaction', 'reference'], outputs=['out_2'])
+    dag.scriptexecute('helper_script', 'post_processing', inputs=['out_1', 'out_2'], outputs=[output_key_name])
+    dag.execute()
 
     # get result
-    result = conn.execute_command('AI.TENSORGET','model_result','VALUES')
-    print(result)
+    result = conn.tensorget(output_key_name)
+    # result = conn.execute_command('AI.TENSORGET','model_result','VALUES')
+    print("result: ", result)
     print("Total execution took: " + str((time.time() - start) * 1000) + " ms")
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-rs', '--redis_server', help='Redis URL', type=str, default='redis://127.0.0.1:6379')
-
-    args = parser.parse_args()
-
     # Set up redis connection
-    url = urlparse(args.redis_server)
-    conn = redis.Redis(host=url.hostname, port=url.port)
+    conn = Client(host='localhost', port=6379)
     if not conn.ping():
         raise Exception('Redis unavailable')
 
