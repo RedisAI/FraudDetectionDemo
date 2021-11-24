@@ -8,8 +8,12 @@ from urllib.parse import urlparse
 
 
 class DataGenerator:
-    def __init__(self, conn, df):
+    def __init__(self, conn, path, n_samples):
         self._conn = conn
+        # Read csv file
+        df = pd.read_csv(path, nrows=n_samples)
+        # Remove classification
+        del df['Class']
         self._df = df
 
     def generate_data(self):
@@ -22,15 +26,15 @@ class DataGenerator:
             timestamp = str(timestamp)
             if timestamp not in key_names:
                 key_names[timestamp] = 0
-            # Use a unique key name, which is '<time_stamp>_<index>'
-            hash_key_name = timestamp + '_' + str(key_names[timestamp])
+            # Use a unique key name, which is '<time_stamp>_<index>{tag}'
+            hash_key_name = timestamp + '_' + str(key_names[timestamp]) + '{tag}'
             key_names[timestamp] = key_names[timestamp] + 1
 
             # set reference raw data
             self._conn.hset(hash_key_name, mapping=record)
 
             # add key of reference to sorted set
-            self._conn.zadd("references", {hash_key_name: timestamp})
+            self._conn.zadd("references{tag}", {hash_key_name: timestamp})
 
 
 if __name__ == '__main__':
@@ -45,10 +49,7 @@ if __name__ == '__main__':
     conn = redis.Redis(host=url.hostname, port=url.port)
     if not conn.ping():
         raise Exception('Redis unavailable')
-    # Read csv file
-    df = pd.read_csv("data/creditcard.csv", nrows=args.nrows)
-    # Remove classification
-    del df['Class']
+
     # Load reference data
-    dg = DataGenerator(conn, df)
+    dg = DataGenerator(conn, "data/creditcard.csv", args.nrows)
     dg.generate_data()
