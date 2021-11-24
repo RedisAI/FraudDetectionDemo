@@ -47,6 +47,7 @@ if __name__ == '__main__':
     # Set up redis connection
     url = urlparse(args.redis_server)
     conn = redis.Redis(host=url.hostname, port=url.port)
+    print(url.hostname)
     if not conn.ping():
         raise Exception('Redis unavailable')
 
