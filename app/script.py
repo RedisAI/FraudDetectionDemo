@@ -22,9 +22,9 @@ def create_ref_tensor(tensors: List[Tensor]):
 
 def hashes_to_tensor(tensors: List[Tensor], keys: List[str], args: List[str]):
 
-    # Get the hashes from redis
+    # Get the hashes from redis, use the 10 recent transactions at most
     tensors_from_hashes = []
-    for key in keys:
+    for key in keys[:10]:
         hash_values = redis.asList(redis.execute("HVALS", key))
         # convert every value in the hash to a torch tensor, and concatenate them to a single tensor
         tensor = [torch.tensor(float(str(v))).reshape(1, 1) for v in hash_values]

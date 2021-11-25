@@ -11,10 +11,15 @@ on:
 jobs:
   run_tests:
     runs-on: ubuntu-latest
-    container: redislabs/redisai:edge-cpu-bionic
+    services:
+      redis:
+        image: redislabs/redisai:edge-cpu-bionic
+        ports:
+          - 6379:6379
+
     steps:
     - uses: actions/checkout@v2
-    - name: Test
+    - uses: docker://python:latest
       run: |
         python3 tests/test_demo_flow.py
 
