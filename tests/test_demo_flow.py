@@ -10,21 +10,13 @@ from app import app_runner
 
 
 class FraudDetectionDemoTest(unittest.TestCase):
-    n_samples = None
-    redis_conn = None
+    redis_conn = Client(host='localhost', port=6379)
+    n_samples = 1000
+    dg = load.DataGenerator(redis_conn, "dataloader/data/creditcard.csv", n_samples)
+
     model_key = 'fraud_detection_model{tag}'
     script_key = 'helper_script{tag}'
     references_key = 'references{tag}'
-
-    @classmethod
-    def setUpClass(cls):
-        # Set up redis connection
-        cls.redis_conn = Client(host='localhost', port=6379)
-        if not cls.redis_conn.ping():
-            raise Exception('Redis unavailable')
-        
-        cls.n_samples = 1000
-        cls.dg = load.DataGenerator(cls.redis_conn, "dataloader/data/creditcard.csv", cls.n_samples)
 
     def tearDown(self):
         self.redis_conn.flushall()
