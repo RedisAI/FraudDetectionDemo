@@ -13,6 +13,9 @@ def predict(conn, min_ts, max_ts, references_key, model_key, script_key):
     transaction_tensor = np.random.randn(1, 30).astype(np.float32)
     transaction_tensor[0][0] = max_ts
     print(transaction_tensor)
+
+    # todo: take only 10
+    # todo: test performance imapct what this is called from within the script
     # Find the relevant reference data (transaction that occurred within the time interval)
     ref_data_keys = conn.zrangebyscore(references_key, min_ts, max_ts)
 

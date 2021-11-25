@@ -5,8 +5,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  schedule:
-    - cron: '0 0 * * *' 
+#  schedule:
+#    - cron: '0 0 * * *'
 
 jobs:
   build:
@@ -23,4 +23,3 @@ jobs:
       run: |
         pip3 install -r example_client/requirements.txt
         python3 example_client/client.py
-      
