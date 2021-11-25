@@ -11,7 +11,9 @@ class DataGenerator:
     def __init__(self, conn, path, n_samples):
         self._conn = conn
         # Read csv file
+        print("path: ", path)
         df = pd.read_csv(path, nrows=n_samples)
+        print("df shape: ", df.shape)
         # Remove classification
         del df['Class']
         self._df = df
