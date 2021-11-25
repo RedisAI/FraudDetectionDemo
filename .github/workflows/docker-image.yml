@@ -12,10 +12,11 @@ jobs:
   run_tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: docker://redislabs/redisai:edge-cpu-bionic
       - uses: actions/checkout@v2
       - name: Test
-        run: |
+        with:
+          image: redislabs/redisai:edge-cpu-bionic
+          run: |
             pip3 install -r example_client/requirements.txt
             python3 tests/test_demo_flow.py
 
