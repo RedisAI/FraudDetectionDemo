@@ -9,7 +9,17 @@ on:
 #    - cron: '0 0 * * *'
 
 jobs:
-  build:
+  run_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Launch RedisAI docker
+        uses: docker://redislabs/redisai:edge-cpu-bionic
+      - name: Test
+        run: |
+            pip3 install -r example_client/requirements.txt
+            python3 tests/test_demo_flow
+
+  run_demo:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
