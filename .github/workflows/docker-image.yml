@@ -20,6 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: docker://python:latest
+    - name: Run tests
       run: |
         python3 tests/test_demo_flow.py
 
