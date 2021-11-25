@@ -1,5 +1,3 @@
 numpy
 pandas
 redisai
-dataloader
-app
