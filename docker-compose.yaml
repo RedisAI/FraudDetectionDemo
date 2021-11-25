@@ -14,7 +14,7 @@ services:
     depends_on:
       - redis
       - dataloader
-    command: ['app.py', '--redis_server', 'redis://redis:6379']
+    command: ['app_runner.py', '--redis_server', 'redis://redis:6379']
   redisinsight:
     image: redislabs/redisinsight:1.11.0
     depends_on:

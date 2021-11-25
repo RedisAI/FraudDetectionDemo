@@ -3,8 +3,10 @@ from multiprocessing import Process
 import numpy as np
 
 from redisai import Client
-from dataloader.load import DataGenerator
-from app.app import FraudDetectionApp
+from dataloader import load
+from app import app_runner
+#from dataloader.load import DataGenerator
+#from app.app import FraudDetectionApp
 
 
 class DataGeneratorTest(unittest.TestCase):
@@ -22,7 +24,7 @@ class DataGeneratorTest(unittest.TestCase):
             raise Exception('Redis unavailable')
         
         cls.n_samples = 1000
-        cls.dg = DataGenerator(cls.redis_conn, "../dataloader/data/creditcard.csv", cls.n_samples)
+        cls.dg = load.DataGenerator(cls.redis_conn, "../dataloader/data/creditcard.csv", cls.n_samples)
 
     def tearDown(self):
         self.redis_conn.flushall()
@@ -52,7 +54,7 @@ class DataGeneratorTest(unittest.TestCase):
             assert (first_hash[key].decode() == str(self.dg._df[key.decode()][0]))
 
     def test_hashes_to_tensor(self):
-        app = FraudDetectionApp(self.redis_conn)
+        app = app_runner.FraudDetectionApp(self.redis_conn)
 
         # Set the script in Redis
         app.set_script('../app/script.py', self.script_key)
@@ -70,7 +72,7 @@ class DataGeneratorTest(unittest.TestCase):
         assert (result['shape'] == [1, 256])
 
     def test_entire_flow_multiple_clients(self):
-        app = FraudDetectionApp(self.redis_conn)
+        app = app_runner.FraudDetectionApp(self.redis_conn)
         app.set_script('../app/script.py', 'helper_script{tag}')
         app.set_model('../app/models/creditcardfraud.pb', 'fraud_detection_model{tag}')
         self.dg.generate_data()
