@@ -23,14 +23,14 @@ def create_ref_tensor(tensors: List[Tensor]):
 def hashes_to_tensor(tensors: List[Tensor], keys: List[str], args: List[str]):
 
     # Get the hashes from redis
-    tensors = []
+    tensors_from_hashes = []
     for key in keys:
         hash_values = redis.asList(redis.execute("HVALS", key))
         # convert every value in the hash to a torch tensor, and concatenate them to a single tensor
         tensor = [torch.tensor(float(str(v))).reshape(1, 1) for v in hash_values]
-        tensors.append(torch.cat(tensor, dim=0))
+        tensors_from_hashes.append(torch.cat(tensor, dim=0))
 
-    return create_ref_tensor(tensors)
+    return create_ref_tensor(tensors_from_hashes)
 
 
 # Average the two input tensors
