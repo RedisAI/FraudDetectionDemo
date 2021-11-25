@@ -12,8 +12,7 @@ jobs:
   run_tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Launch RedisAI docker
-        uses: docker://redislabs/redisai:edge-cpu-bionic
+      - uses: docker://redislabs/redisai:edge-cpu-bionic
       - name: Test
         run: |
             pip3 install -r example_client/requirements.txt
