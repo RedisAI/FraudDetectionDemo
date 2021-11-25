@@ -9,15 +9,17 @@ def predict(conn, min_ts, max_ts, references_key, model_key, script_key):
 
     # Create a random transaction tensor, with 'Time' set as the max_ts (to simulate a condition
     # where we retrieve the latest transactions as our reference data)
+    print(f'\nGenerating a random transaction in Time={max_ts}...')
     transaction_tensor = np.random.randn(1, 30).astype(np.float32)
-    transaction_tensor[0] = max_ts
-
+    transaction_tensor[0][0] = max_ts
+    print(transaction_tensor)
     # Find the relevant reference data (transaction that occurred within the time interval)
     ref_data_keys = conn.zrangebyscore(references_key, min_ts, max_ts)
 
     # Create a DAG (execution plan) for RedisAI. First, use the helper script to convert the reference data
     # within the hashes into a tensor. Then run the 2 models and obtain 2 outputs,
     # and finally use the helper script to take their average to be the result (and persist it in key space)
+    print("\nPerforming fraud detection prediction using reference data (previous transactions)...")
     output_key_name = 'result{tag}'
     dag = conn.dag(persist=[output_key_name])
     dag.tensorset('transaction', transaction_tensor)
@@ -30,6 +32,7 @@ def predict(conn, min_ts, max_ts, references_key, model_key, script_key):
     # get result
     result = conn.tensorget(output_key_name)
     print("result: ", result[0])
+    print(f'Transaction is fraudulent with probability {result[0][0]}\n')
     print("Total execution took: " + str((time.time() - start) * 1000) + " ms")
 
 
@@ -51,7 +54,7 @@ def main():
         min_sample_time, max_sample_time = max_sample_time, min_sample_time
 
     # Running a single execution
-    print("time interval: ", (min_sample_time, max_sample_time))
+    print("Time interval for reference data: ", (min_sample_time, max_sample_time))
     model_key = 'fraud_detection_model{tag}'
     script_key = 'helper_script{tag}'
     predict(conn, min_sample_time, max_sample_time, references_key, model_key, script_key)
