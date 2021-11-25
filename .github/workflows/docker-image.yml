@@ -17,7 +17,7 @@ jobs:
       - name: Test
         run: |
             pip3 install -r example_client/requirements.txt
-            python3 tests/test_demo_flow
+            python3 tests/test_demo_flow.py
 
   run_demo:
     runs-on: ubuntu-latest
