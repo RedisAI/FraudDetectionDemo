@@ -19,6 +19,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Install git-lfs
+      run: |
+          git lfs install
+          git lfs fetch && git lfs checkout
     - uses: docker://python:latest
     - name: Run tests
       run: |
