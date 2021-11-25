@@ -14,15 +14,13 @@ def predict(conn, min_ts, max_ts, references_key, model_key, script_key):
     transaction_tensor[0][0] = max_ts
     print(transaction_tensor)
 
-    # todo: take only 10
-    # todo: test performance imapct what this is called from within the script
-    # Find the relevant reference data (transaction that occurred within the time interval)
-    ref_data_keys = conn.zrangebyscore(references_key, min_ts, max_ts)
+    # Find the relevant reference data (up to 10 recent transaction that occurred within the time interval)
+    ref_data_keys = conn.zrevrangebyscore(references_key, max_ts, min_ts)[:10]
 
     # Create a DAG (execution plan) for RedisAI. First, use the helper script to convert the reference data
     # within the hashes into a tensor. Then run the 2 models and obtain 2 outputs,
     # and finally use the helper script to take their average to be the result (and persist it in key space)
-    print("\nPerforming fraud detection prediction using reference data (previous transactions)...")
+    print("\nPerforming fraud detection prediction using reference data (use up to 10 previous transactions)...")
     output_key_name = 'result{tag}'
     dag = conn.dag(persist=[output_key_name])
     dag.tensorset('transaction', transaction_tensor)
