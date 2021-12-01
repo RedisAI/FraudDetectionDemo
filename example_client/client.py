@@ -25,8 +25,8 @@ def predict(conn, min_ts, max_ts, references_key, model_key, script_key):
     dag = conn.dag(persist=[output_key_name])
     dag.tensorset('transaction', transaction_tensor)
     dag.scriptexecute(script_key, 'hashes_to_tensor', keys=ref_data_keys, outputs=['reference'])
-    dag.modelexecute(model_key, inputs=['transaction', 'reference'], outputs=['out_1'])
-    dag.modelexecute(model_key, inputs=['transaction', 'reference'], outputs=['out_2'])
+    dag.modelexecute(model_key+'_CPU', inputs=['transaction', 'reference'], outputs=['out_1'])
+    dag.modelexecute(model_key+'_CPU:1', inputs=['transaction', 'reference'], outputs=['out_2'])
     dag.scriptexecute(script_key, 'post_processing', inputs=['out_1', 'out_2'], outputs=[output_key_name])
     dag.execute()
 

@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redis:
-        image: redislabs/redisai:edge-cpu-bionic
+        image: redislabs/redisai:latest
         ports:
           - 6379:6379
 

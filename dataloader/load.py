@@ -1,9 +1,6 @@
 import redis
 import argparse
-import time
 import pandas as pd
-import numpy as np
-from random import randrange
 from urllib.parse import urlparse
 
 
