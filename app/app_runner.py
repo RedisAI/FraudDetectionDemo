@@ -16,7 +16,8 @@ class FraudDetectionApp:
     def set_model(self, path, model_key):
         with open(path, 'rb') as f:
             model = f.read()
-            self.con.modelstore(model_key, 'TF', 'CPU', data=model, inputs=['transaction', 'reference'], outputs=['output'])
+            self.con.modelstore(model_key+'_CPU', 'TF', 'CPU', data=model, inputs=['transaction', 'reference'], outputs=['output'])
+            self.con.modelstore(model_key+'_CPU:1', 'TF', 'CPU', data=model, inputs=['transaction', 'reference'], outputs=['output'])
 
 
 if __name__ == '__main__':

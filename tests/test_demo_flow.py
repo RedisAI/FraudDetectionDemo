@@ -5,8 +5,6 @@ import numpy as np
 from redisai import Client
 from dataloader import load
 from app import app_runner
-#from dataloader.load import DataGenerator
-#from app.app import FraudDetectionApp
 
 
 class FraudDetectionDemoTest(unittest.TestCase):
@@ -83,8 +81,8 @@ class FraudDetectionDemoTest(unittest.TestCase):
             dag = self.redis_conn.dag(persist=[output_key_name])
             dag.tensorset('transaction', transaction_tensor)
             dag.scriptexecute(self.script_key, 'hashes_to_tensor', keys=ref_data_keys, outputs=['reference'])
-            dag.modelexecute(self.model_key, inputs=['transaction', 'reference'], outputs=['out_1'])
-            dag.modelexecute(self.model_key, inputs=['transaction', 'reference'], outputs=['out_2'])
+            dag.modelexecute(self.model_key+'_CPU', inputs=['transaction', 'reference'], outputs=['out_1'])
+            dag.modelexecute(self.model_key+'_CPU:1', inputs=['transaction', 'reference'], outputs=['out_2'])
             dag.scriptexecute(self.script_key, 'post_processing', inputs=['out_1', 'out_2'], outputs=[output_key_name])
             dag.execute()
 
@@ -102,9 +100,9 @@ class FraudDetectionDemoTest(unittest.TestCase):
         # assert valid results
         for i in range(n_clients):
             client_output = 'result{tag}' + str(i)
-            result = self.redis_conn.tensorget(client_output)
-            assert (len(result[0]) == 2)
-            assert (0 <= result[0][0] <= 100 and 0 <= result[0][1] <= 100)
+            result = np.reshape(self.redis_conn.tensorget(client_output), -1)
+            assert (result.shape == (2,))
+            assert ((0 <= result.all()) & (result.all() <= 100))
 
 
 if __name__ == '__main__':
