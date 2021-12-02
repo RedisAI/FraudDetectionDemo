@@ -1,9 +1,9 @@
 version: '3'
 services:
   redis:
-    build: ./redis
+    image: redislabs/redisai:latest
     ports:
-      - 6379:6379
+      - "6379:6379"
   dataloader:
     build: ./dataloader
     depends_on:
