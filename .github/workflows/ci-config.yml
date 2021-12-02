@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redislabs/redisai:latest
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install git-lfs
+      run: |
+          git lfs install
+          git lfs fetch && git lfs checkout
+    - uses: docker://python:latest
+    - name: Run tests
+      run: |
+        pip3 install -r example_client/requirements.txt
+        python3 -m unittest tests/test_demo_flow.py
+
+  run_demo:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Checkout model 
+      run: |
+        git lfs install 
+        git lfs fetch && git lfs checkout
+    - name: Build the docker-compose image
+      run: docker-compose up -d
+    - name: Test 
+      run: |
+        pip3 install -r example_client/requirements.txt
+        python3 example_client/client.py

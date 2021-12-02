@@ -1,9 +1,9 @@
 version: '3'
 services:
   redis:
-    build: ./redis
+    image: redislabs/redisai:latest
     ports:
-      - 6379:6379
+      - "6379:6379"
   dataloader:
     build: ./dataloader
     depends_on:
@@ -14,9 +14,9 @@ services:
     depends_on:
       - redis
       - dataloader
-    command: ['app.py', '--redis_server', 'redis://redis:6379']
+    command: ['app_runner.py', '--redis_server', 'redis://redis:6379']
   redisinsight:
-    image: redislabs/redisinsight:1.6.0
+    image: redislabs/redisinsight:1.11.0
     depends_on:
       - app
     ports:
