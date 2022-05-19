@@ -16,7 +16,7 @@ services:
       - dataloader
     command: ['app_runner.py', '--redis_server', 'redis://redis:6379']
   redisinsight:
-    image: redislabs/redisinsight:1.11.0
+    image: redislabs/redisinsight:latest
     depends_on:
       - app
     ports:

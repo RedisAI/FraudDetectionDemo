@@ -1,19 +1,33 @@
 [![license](https://img.shields.io/github/license/RedisAI/FraudDetectionDemo.svg)](https://github.com/RedisAI/FraudDetectionDemo)
-[![Action](https://github.com/RedisAI/FraudDetectionDemo/workflows/Docker-CI/badge.svg)](https://github.com/RedisAI/FraudDetectionDemo/actions?query=workflow%3ADocker-CI)
+[![CI](https://github.com/RedisAI/FraudDetectionDemo/actions/workflows/ci-config.yml/badge.svg)](https://github.com/RedisAI/FraudDetectionDemo/actions/workflows/ci-config.yml)
 [![Forum](https://img.shields.io/badge/Forum-RedisAI-blue)](https://forum.redislabs.com/c/modules/redisai)
-[![Discord](https://img.shields.io/discord/697882427875393627?style=flat-square)](https://discord.gg/rTQm7UZ)
+[![Discord](https://img.shields.io/discord/697882427875393627)](https://discord.gg/rTQm7UZ)
 
-# FraudDetectionDemo
+# Fraud Detection Demo    
 
-This demo combines several [Redis](https://redis.io) data structures and [Redis Modules](https://redis.io/topics/modules-intro)
-to showcase the advantage of data locality during transaction scoring.
-
-It uses:
-
-* [RedisGears](https://oss.redislabs.com/redisgears/) to orchestrate the transactions and preprocessing the data by means of [functions](https://oss.redislabs.com/redisgears/functions.html)
-* [RedisAI](https://oss.redislabs.com/redisai/) to preprocess the data and to run several DL/ML models
+This demo showcases the advantage of **data locality** during transaction scoring, by using [RedisAI](https://oss.redislabs.com/redisai/) module.
+It simulates a fraud-detection app which is based on ML model prediction in real-time. When a new transaction is executed, it triggers a flow whose output is the probability that this transaction is fraudulent. The prediction is based on both the given transaction and some reference data stored in Redis, while *the entire flow* is done within Redis as well.   
 
 ## Architecture
+### RedisAI
+Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). Recall that RedisAI allows you to store and execute AI/ML pre-trained models in Redis.
+
+### Data Loader
+Historical data of credit card transactions is loaded into Redis from `data/creditcard.csv` file, using redis-py (Redis' python client). Every transaction is stored in Redis as a hash with the following structure:
+- The key is `<time_stamp>_<index>{tag}`, where `<index>` is used to differentiate transactions' keys that occur in the same timestamp, and `{tag}` is used to ensure that all hashes are stored in the same shard (when using clustered environment). 
+- The hash value is a dictionary that contains 29 numeric features ("v0", "v1", ... "v28") that represent the transaction, and another field ("amount") specifying the amount of money to transfer in the transaction.
+
+In addition, all the hashes' keys are kept in a sorted set stored in Redis whose key is `refernces{tag}`, and every element in it is of the form: `{hash_key_name: timestamp}`. This sorted sed keeps track of the keynames of these hashes sorted by time.
+
+### App
+The "app" is a basic component that loads the fraud detection pre-trained ML model into RedisAI under the key "fraud_detection_model{tag}_CPU", along with a torch script which is used for pre-processing of the data. This model was built using Tensorflow, which is one of the 3 ML frameworks that RedisAI supports as backends.
+
+**GPU support:** If your machine has GPU with nvidia CUDA support, it is possible to load models several times under different keys, and associated each one with a different device (for example: "fraud_detection_model{tag}_GPU" and "fraud_detection_model{tag}_GPU:1"). Since RedisAI allows executing operation in parallel on different devices, this practice is useful for gaining better utilization of GPU resources.
+
+### RedisInsight
+
+todo: cont. from here...
+
 ### Flow 1: Updating reference data
 Raw reference data is kept in Redis that can be fed as input to DL/ML models.  In order to save processing time during inferencing, the raw reference data is converted into tensors on each update.
 
