@@ -8,65 +8,17 @@
 This demo showcases the advantage of **data locality** during transaction scoring, by using [RedisAI](https://oss.redislabs.com/redisai/) module.
 It simulates a fraud-detection app which is based on ML model prediction in real-time. When a new transaction is executed, it triggers a flow whose output is the probability that this transaction is fraudulent. The prediction is based on both the given transaction and some reference data stored in Redis, while *the entire flow* is done within Redis as well.   
 
-## Architecture
-### RedisAI
-Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). Recall that RedisAI allows you to store and execute AI/ML pre-trained models in Redis.
-
-### Data Loader
-Historical data of credit card transactions is loaded into Redis from `data/creditcard.csv` file, using redis-py (Redis' python client). Every transaction is stored in Redis as a hash with the following structure:
-- The key is `<time_stamp>_<index>{tag}`, where `<index>` is used to differentiate transactions' keys that occur in the same timestamp, and `{tag}` is used to ensure that all hashes are stored in the same shard (when using clustered environment). 
-- The hash value is a dictionary that contains 29 numeric features ("v0", "v1", ... "v28") that represent the transaction, and another field ("amount") specifying the amount of money to transfer in the transaction.
-
-In addition, all the hashes' keys are kept in a sorted set stored in Redis whose key is `refernces{tag}`, and every element in it is of the form: `{hash_key_name: timestamp}`. This sorted sed keeps track of the keynames of these hashes sorted by time.
-
-### App
-The "app" is a basic component that loads the fraud detection pre-trained ML model into RedisAI under the key "fraud_detection_model{tag}_CPU", along with a torch script which is used for pre-processing of the data. This model was built using Tensorflow, which is one of the 3 ML frameworks that RedisAI supports as backends.
-
-**GPU support:** If your machine has GPU with nvidia CUDA support, it is possible to load models several times under different keys, and associated each one with a different device (for example: "fraud_detection_model{tag}_GPU" and "fraud_detection_model{tag}_GPU:1"). Since RedisAI allows executing operation in parallel on different devices, this practice is useful for gaining better utilization of GPU resources.
-
-### RedisInsight
-
-todo: cont. from here...
-
-### Flow 1: Updating reference data
-Raw reference data is kept in Redis that can be fed as input to DL/ML models.  In order to save processing time during inferencing, the raw reference data is converted into tensors on each update.
-
-The reference data for the transaction scoring is modelled as Redis Hashes. A sorted set keeps track of the keynames of these hashes sorted by time.
-
-A [first RedisGears function](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/gear.py#L47) is triggered on each update of the reference data. It registers to `SET` events of the type `hash`. This function itself is converting the hash into a tensor and stores it back into Redis (using the `hashToTensor` method).
-`numpy` is used in the function to serialise the values of the hash into an
-`ndarray` with a shape `(1, 30)` after which it's stored as a [RedisAI tensor](https://oss.redislabs.com/redisai/intro/#using-redisai-tensors).
-
-![Updating reference data](./flow1.png "Updating reference data")
-
-
-### Flow 2: Transaction scoring
-When a new transaction happens, it needs to be evaluated if it's fraudulent or not.  The ML/DL models take two inputs for this, the relevant reference data and the new transaction details.  RedisGears will orchestrate the fetching of the relevant reference data and creating a single input tensor out of it via a Torch Script.  Afterwards it will execute several inferences using TensorFlow models hosted inside Redis and combine the results to reply the transaction scoring result.
-
-![High level architecture](./flow2.png "High level architecture")
-
-An input tensor is set in the keyspace with the shape of `(1, 30)`. A second RedisGears function is triggered with as input
-- the keyname holding the new transaction details tensor
-- a time range, represented by two timestamps.
-
-The function then executes a range query over the sorted set ([`ZRANGEBYSCORE`](https://redis.io/commands/zrangebyscore)) and retrieves a list of hash names (recall that each hash has a corresponding tensor as described in Flow 1).
-
-![Gears<->Redis data gathering](./flow3.png "Gears<->Redis data gathering")
-
-From this list it extracts a list of tensors from the keyspace and sends it to a [Torch script](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/script.torch). This torch script creates a
-new tensor with the shape `(1, 256)`, by concatenating the tensors and either pad the remaining space or trimming it.
-The new tensor is the reference data for the models which expect a reference data with shape of `(1, 256)` and transaction details tensor with the shape of `(1, 30)`. Once the inferencing of the models are done, the function uses `numpy` to aggregate the results and save them to a tensor
-with shape `(1, 2)` that contains the probability for the transaction to be a fraud.
-
-![Gears<->AI execution](./flow4.png "Gears<->AI execution")
-
 ## Running the Demo
-To run the demo:
+To run the demo app and load the data, run the following:
 ```
-$ git clone https://github.com/RedisAI/FraudDetectionDemo.git
-$ cd FraudDetectionDemo
 # If you don't have it already, install https://git-lfs.github.com/ (On OSX: brew install git-lfs)
 $ git lfs install && git lfs fetch && git lfs checkout
+
+# Clone the repository
+$ git clone https://github.com/RedisAI/FraudDetectionDemo.git
+$ cd FraudDetectionDemo
+
+# Launch the demo with docker-compose (may require sudo in linux)
 $ docker-compose up
 ```
 If something went wrong, e.g. you skipped installing git-lfs, you need to force docker-compose to rebuild the containers
@@ -74,74 +26,85 @@ If something went wrong, e.g. you skipped installing git-lfs, you need to force 
 $ docker-compose up --force-recreate --build
 ```
 
-The `app` container will [load](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/app.py)
-- The [two tensorflow models](https://github.com/RedisAI/FraudDetectionDemo/tree/master/app/models)
-- The [Torch script](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/script.torch)
-- The RedisGears functions
+## Architecture
+### RedisAI
+Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). Recall that RedisAI allows you to store and execute AI/ML pre-trained models in Redis.
 
-The `dataloader` container will [load](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py)
-- 1000 [raw reference data points](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L29)
-- 1000 [tensor](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L32) representations of these raw data points
-- 1 [sorted set](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L35)
+### Data Loader
+Historical data of credit card transactions is loaded into Redis from `data/creditcard.csv` file, using redis-py (Redis' official python client). Every transaction is stored in Redis as a hash with the following structure:
+- The key is `<time_stamp>_<index>{tag}`, where `<index>` is used to differentiate between keys which correspond to transactions that have occurred in the same timestamp, and `{tag}` is used to ensure that all hashes are stored in the same shard (when using clustered environment). 
+- The hash value is a dictionary that contains 29 numeric features ("v0", "v1", ... "v28") that represent the transaction, and another field ("amount") specifying the amount of money to transfer in the transaction.
 
-### Explore loaded reference data
-This demo bundles a [RedisInsight](https://redislabs.com/redisinsight/) container which is an intuitive GUI for Redis. Open a browser and point it at https://localhost:8001 and select the preloaded redis connection.
+In addition, all the hashes' keys are kept in a sorted set stored in Redis whose key is `refernces{tag}`, and every element in it is of the form: `{hash_key_name: timestamp}`. This sorted set keeps track of the keynames of these hashes sorted by time.
 
-In the CLI tool, execute the following command:
+### App
+The app is a basic component that loads the fraud detection pre-trained ML model into RedisAI, along with a [TorchScript](https://oss.redis.com/redisai/intro/#scripting) which is used for pre-processing of the data. This model was built using Tensorflow, which is one of the three ML frameworks that RedisAI supports as backends.
+
+**Multiple devices:** RedisAI allows executing operation in parallel on different logical devices. Hence, the fraud-detection model is loaded twice under two different key names: `fraud_detection_model{tag}_CPU` and `fraud_detection_model{tag}_CPU:1`, which are associated to `CPU` and `CPU:1` devices respectively. Side note - If your machine has GPU with nvidia CUDA support, it is a good practice to load models that can run in parallel and associate each one with a different device (for example: `fraud_detection_model{tag}_GPU:0` and `fraud_detection_model{tag}_GPU:1`), for gaining better utilization of GPU resources.
+
+### RedisInsight
+[RedisInsight](https://redis.com/redis-enterprise/redis-insight/) is a desktop manager that provides an intuitive and efficient GUI for Redis, allowing you to interact with your databases, monitor, and manage your data. This demo bundles a RedisInsight container, to enable visualization and exploration of the data.  
+
+## Explore loaded reference data
+Open a browser and point it to RedisInsight at https://localhost:8001 and select the preloaded redis connection.
+In the *CLI* tool, execute the following command:
 ```bash
 >> dbsize
-(integer) 2004
+(integer) 1004
 ```
 
-The 2004 keys make up for
-- 1000 raw reference data points
-- 1000 tensor representations of these raw data points
+The 1004 keys stands for:
+- 1000 raw reference data points (hashes)
 - 1 sorted set
 - 1 Torch script
 - 2 Tensorflow models
 
-### Exploring Flow 1
-Select a key of a hash containing reference data in the Browser Tool and go back to the CLI. Notice that the commands will execute use two different keys:
+Under the *browser* tool, you can see the loaded keys. Select a key of a hash (such as`478_2{tag}`) to see an example for transaction data.
 
-- `478_2` the raw reference data.
-- `478_2_tensor` the tensor counterpart of this raw reference data.
+![Demo hash](./demo_hash.png "Demo hash redisInsights")
 
-The following three commands will demonstrate that the tensor representation of the raw data is always kept in sync by RedisGears.  
+Next, click on *RedisAI* visualization tool to see the two loaded models and the script. By selecting the code of the script. 
 
-1. `debug object 478_2_tensor` will allow you to inspect the last time the tensor key was touched (`lru_seconds_idle`).
-1. Update a field in the raw data via the `HSET` command.
-1. Debug the object again and notice that the `lru_seconds_idle` has now been updated.
+![Demo redisAI](./demo_redisAI.png "Demo redisAI redisInsights")
 
-```
->> debug object 478_2_tensor
-"Value at:0x7f915600dc10 refcount:1 encoding:raw serializedlength:146 lru:16636612 lru_seconds_idle:69"
->> hset 478_2 Amount 123
-(integer) 0
->> debug object 478_2_tensor
-"Value at:0x7f915600dc20 refcount:1 encoding:raw serializedlength:146 lru:16636690 lru_seconds_idle:2"
-```
-![Demo Flow 1 CLI](./demo_flow1_cli.png "Demo Flow 1 CLI")
+## Flow
+When a new transaction happens, it needs to be evaluated if it's fraudulent or not. The ML/DL models take two inputs for this, the relevant reference data and the new transaction details.
+First, the relevant keys with respect to the new transaction time and a certain time interval are obtained via range query over the `refernces` sorted set. The hash values of those keys will constitute the relevant reference data. Next, RedisAI DAG (directed acyclic graph) object will is used to orchestrate the end-to-end prediction flow, that will be triggered upon calling the [AI.DAGEXECUTE command](https://oss.redis.com/redisai/commands/#aidagexecute). The DAG's operation are the following:
+1. Loading the numeric representation of the new transaction as a tensor with [`AI.TENSROSET` command](https://oss.redis.com/redisai/commands/#aitensorset).
+2. Running the `hashes_to_tensor` pre-processing function to create the reference data tensor. This function receives the list of relevant keys in Redis as input, and construct a reference data tensor based on these values, that are fetched directly from Redis (using [Redis command support for TorchScript](https://oss.redis.com/redisai/commands/#redis-commands-support)).
+3. Running the two fraud-detection models over the `transaction` and `refernces` inputs in parallel (recall that each model was associated with a different logical device).
+4. Running the `post_processing` function that receives both models' predictions as inputs, and outputs the average score.
+5. Storing the output of the `post_processing` function under the key `result{tag}` in Redis.
 
-When we inspect the Function in the RedisGears tool we can verify that the function was triggered exactly once.
+Finally, the score of the transaction (i.e., the probability in which it is fraudulent) is fetched by using [`AI.TENSORGET` command](https://oss.redis.com/redisai/commands/#aitensorget).
 
-![Demo Flow 1 RedisGears](./demo_flow1_gears.png "Demo Flow 1 RedisGears")
-
-### Exploring Flow 2
-Open a second terminal to emulate a client application connecting to redis:
-```
+### Simulation
+To simulate this flow with a client application connecting to redis, run the following:
+```bash
 $ pip3 install -r example_client/requirements.txt
 $ python3 example_client/client.py
-```
-This client will execute 3 commands to redis that simulate the transaction scoring:
-1. `AI.TENSORSET` will set the transaction input data for the model.
-1. `RG.TRIGGER` will trigger the second Function that will orchestrate Flow 2.
-1. `AI.TENSORGET` will fetch the output result of the Function.
 
-```bash
-$ python3 example_client/client.py
-[b'0.11767192184925079', b'0.8823280930519104']
-Total execution took: 9.902238845825195 ms
+Time interval for reference data:  (61, 270)
+
+Generating a random transaction in Time=270...
+[[ 2.7000000e+02 -8.2951581e-01 -4.4787747e-01  6.0682118e-01
+   4.7524232e-01  2.3593563e-01  1.2634248e+00 -1.2233499e+00
+   3.7027165e-01 -8.8206857e-02  8.6683428e-01  8.9412665e-01
+  -4.8722781e-02 -5.2572483e-01 -1.5464017e+00 -4.5807543e-01
+  -1.4910455e-01  9.2615825e-01  6.2056929e-01 -3.8565230e-02
+  -1.0080141e+00  3.9647776e-01  1.6992532e+00 -9.6349031e-02
+  -8.6946076e-01  5.5705246e-02  2.1251810e-01  1.2321904e-01
+  -3.3462542e-01 -4.5848402e-01]]
+
+Performing fraud detection prediction using reference data (use up to 10 previous transactions)...
+result:  [0.02251661 0.9774834 ]
+Transaction is fraudulent with probability 0.022516613826155663
+
+Total execution took: 3.930330276489258 ms
+
+
 ```
 
-![Demo Flow 2 Gears](./demo_flow2_gears.png "Demo Flow 2 RedisGears")
-![Demo Flow 2 CLI](./demo_flow2_output.png "Demo Flow 2 CLI")
+In this simulation, a random time interval is generated, and a random transaction to be processed in the upper bound of this time interval is generated (represented by a tensor whose dimensions are `(1,30)`). Then, a reference data tensor whose dimensions are `(1, 256)` is prepared from the (up to) 10 most recent transactions' data, by concatenating their values and either pad the remaining space or trimming it (this is done in the `hashes_to_tensor` function of the Torch Script). Overall, the client runs the entire flow by running the AI.DAGEXECUTE command, and the results are stored in Redis.    
+
+![Demo flow res](./demo_res.png "Demo flow result")
