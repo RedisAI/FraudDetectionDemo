@@ -78,8 +78,10 @@ First, the relevant keys with respect to the new transaction time and a certain 
 
 Finally, the score of the transaction (i.e., the probability in which it is fraudulent) is fetched by using [`AI.TENSORGET` command](https://oss.redis.com/redisai/commands/#aitensorget).
 
+![Demo flow](./demo_flow.png "Demo flow")
+
 ### Simulation
-To simulate this flow with a client application connecting to redis, run the following:
+To simulate this flow with a client application connecting to redis, run the following (here you can also see an example of the simulation output):
 ```bash
 $ pip3 install -r example_client/requirements.txt
 $ python3 example_client/client.py
@@ -105,6 +107,6 @@ Total execution took: 3.930330276489258 ms
 
 ```
 
-In this simulation, a random time interval is generated, and a random transaction to be processed in the upper bound of this time interval is generated (represented by a tensor whose dimensions are `(1,30)`). Then, a reference data tensor whose dimensions are `(1, 256)` is prepared from the (up to) 10 most recent transactions' data, by concatenating their values and either pad the remaining space or trimming it (this is done in the `hashes_to_tensor` function of the Torch Script). Overall, the client runs the entire flow by running the AI.DAGEXECUTE command, and the results are stored in Redis.    
+In this simulation, a random time interval is generated, and a random transaction to be processed in the upper bound of this time interval is generated (represented by a tensor whose dimensions are `(1,30)`). Then, a reference data tensor whose dimensions are `(1, 256)` is prepared from the (up to) 10 most recent transactions' data, by concatenating their values and either pad the remaining space or trimming it (this is done in the `hashes_to_tensor` function of the Torch Script). Overall, the client runs the entire flow by calling AI.DAGEXECUTE command, and the results are stored in Redis.    
 
 ![Demo flow res](./demo_res.png "Demo flow result")
