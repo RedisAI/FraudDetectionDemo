@@ -28,19 +28,20 @@ $ docker-compose up --force-recreate --build
 
 ## Architecture
 ### RedisAI
-Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). Recall that RedisAI allows you to store and execute AI/ML pre-trained models in Redis.
+Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). RedisAI allows you to store and execute AI/ML pre-trained models in Redis.
 
-### Data Loader
-Historical data of credit card transactions is loaded into Redis from `data/creditcard.csv` file, using redis-py (Redis' official python client). Every transaction is stored in Redis as a hash with the following structure:
+### [Data Loader](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py)
+Historical data of credit card transactions is loaded into Redis from [`data/creditcard.csv` file](https://media.githubusercontent.com/media/RedisAI/FraudDetectionDemo/master/dataloader/data/creditcard.csv), using redis-py (Redis' official python client). Every transaction is [stored in Redis](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L31) as a hash with the following structure:
 - The key is `<time_stamp>_<index>{tag}`, where `<index>` is used to differentiate between keys which correspond to transactions that have occurred in the same timestamp, and `{tag}` is used to ensure that all hashes are stored in the same shard (when using clustered environment). 
 - The hash value is a dictionary that contains 29 numeric features ("v0", "v1", ... "v28") that represent the transaction, and another field ("amount") specifying the amount of money to transfer in the transaction.
 
-In addition, all the hashes' keys are kept in a sorted set stored in Redis whose key is `refernces{tag}`, and every element in it is of the form: `{hash_key_name: timestamp}`. This sorted set keeps track of the keynames of these hashes sorted by time.
+In addition, all the hashes' keys are [kept in a sorted set](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L34) stored in Redis whose key is `refernces{tag}`, and every element in it is of the form: `{hash_key_name: timestamp}`. This sorted set keeps track of the keynames of these hashes sorted by time.
 
-### App
-The app is a basic component that loads the fraud detection pre-trained ML model into RedisAI, along with a [TorchScript](https://oss.redis.com/redisai/intro/#scripting) which is used for pre-processing of the data. This model was built using Tensorflow, which is one of the three ML frameworks that RedisAI supports as backends.
+### [App](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/app_runner.py)
+The app is a basic component that [loads the fraud detection pre-trained ML model](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/app_runner.py#L16) into RedisAI, along with a [TorchScript](https://oss.redis.com/redisai/intro/#scripting) which is used for pre-processing of the data. This model was built using Tensorflow, which is one of the three ML frameworks that RedisAI supports as backends.
 
-**Multiple devices:** RedisAI allows executing operation in parallel on different logical devices. Hence, the fraud-detection model is loaded twice under two different key names: `fraud_detection_model{tag}_CPU` and `fraud_detection_model{tag}_CPU:1`, which are associated to `CPU` and `CPU:1` devices respectively. Side note - If your machine has GPU with nvidia CUDA support, it is a good practice to load models that can run in parallel and associate each one with a different device (for example: `fraud_detection_model{tag}_GPU:0` and `fraud_detection_model{tag}_GPU:1`), for gaining better utilization of GPU resources.
+**Multiple devices:** RedisAI allows executing operation in parallel on different logical devices. Hence, the fraud-detection model is loaded twice under two different keys: 1)`fraud_detection_model{tag}_CPU` will be associated with `CPU`, and 2)`fraud_detection_model{tag}_CPU:1`, will be associated with `CPU:1`.
+Side note - If your have a multiple GPU machine with Nvidia CUDA support, it is a good practice to load models that can run in parallel and associate each one with a different device (for example: `fraud_detection_model{tag}_GPU:0` and `fraud_detection_model{tag}_GPU:1`), for gaining better utilization of GPU resources.
 
 ### RedisInsight
 [RedisInsight](https://redis.com/redis-enterprise/redis-insight/) is a desktop manager that provides an intuitive and efficient GUI for Redis, allowing you to interact with your databases, monitor, and manage your data. This demo bundles a RedisInsight container, to enable visualization and exploration of the data.  
@@ -63,18 +64,19 @@ Under the *browser* tool, you can see the loaded keys. Select a key of a hash (s
 
 ![Demo hash](./demo_hash.png "Demo hash redisInsights")
 
-Next, click on *RedisAI* visualization tool to see the two loaded models and the script. By selecting the code of the script. 
+Next, click on *RedisAI* visualization tool to see the two loaded models and the script. By selecting a script, you can see its source code. It is also possible to run models/script's function via the UI, according to [AI.MODELEXECUTE](https://oss.redis.com/redisai/commands/#aimodelexecute) and [AI.SCRIPTEXECUTE](https://oss.redis.com/redisai/commands/#aiscriptexecute) commands' format.   
 
 ![Demo redisAI](./demo_redisAI.png "Demo redisAI redisInsights")
 
 ## Flow
-When a new transaction happens, it needs to be evaluated if it's fraudulent or not. The ML/DL models take two inputs for this, the relevant reference data and the new transaction details.
-First, the relevant keys with respect to the new transaction time and a certain time interval are obtained via range query over the `refernces` sorted set. The hash values of those keys will constitute the relevant reference data. Next, RedisAI DAG (directed acyclic graph) object will is used to orchestrate the end-to-end prediction flow, that will be triggered upon calling the [AI.DAGEXECUTE command](https://oss.redis.com/redisai/commands/#aidagexecute). The DAG's operation are the following:
-1. Loading the numeric representation of the new transaction as a tensor with [`AI.TENSROSET` command](https://oss.redis.com/redisai/commands/#aitensorset).
-2. Running the `hashes_to_tensor` pre-processing function to create the reference data tensor. This function receives the list of relevant keys in Redis as input, and construct a reference data tensor based on these values, that are fetched directly from Redis (using [Redis command support for TorchScript](https://oss.redis.com/redisai/commands/#redis-commands-support)).
-3. Running the two fraud-detection models over the `transaction` and `refernces` inputs in parallel (recall that each model was associated with a different logical device).
-4. Running the `post_processing` function that receives both models' predictions as inputs, and outputs the average score.
-5. Storing the output of the `post_processing` function under the key `result{tag}` in Redis.
+When a new transaction happens, it needs to be evaluated if it's fraudulent or not. The ML/DL models take two inputs for this, the relevant reference data and the new transaction details. The following actions are triggered:
+* First, the relevant keys with respect to the new transaction time and a certain time interval are obtained via range query over the `refernces` sorted set. The hash values of those keys will constitute the relevant reference data.
+* Next, RedisAI DAG (directed acyclic graph) object will be used to orchestrate the end-to-end prediction flow, that will be triggered upon calling the [AI.DAGEXECUTE command](https://oss.redis.com/redisai/commands/#aidagexecute). The DAG's operation are the following:
+  1. [Loading](https://github.com/RedisAI/FraudDetectionDemo/blob/master/example_client/client.py#L26) the numeric representation of the new transaction as a tensor with [`AI.TENSROSET` command](https://oss.redis.com/redisai/commands/#aitensorset).
+  2. Running the [`hashes_to_tensor` pre-processing function](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/script.py#L23) to create the reference data tensor. This function receives the list of relevant keys in Redis as input, and construct a reference data tensor based on these values, that are fetched directly from Redis (using [Redis command support for TorchScript](https://oss.redis.com/redisai/commands/#redis-commands-support)).
+  3. Running the two fraud-detection models over the `transaction` and `refernces` inputs in parallel ([recall](https://github.com/RedisAI/FraudDetectionDemo/blob/master/README.md#L43) that each model was associated with a different logical device).
+  4. Running the [`post_processing` function](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/script.py#L37) that receives both models' predictions as inputs, and outputs the average score.
+  5. [Storing](https://github.com/RedisAI/FraudDetectionDemo/blob/master/example_client/client.py#L25) the output of the `post_processing` function under the key `result{tag}` in Redis.
 
 Finally, the score of the transaction (i.e., the probability in which it is fraudulent) is fetched by using [`AI.TENSORGET` command](https://oss.redis.com/redisai/commands/#aitensorget).
 
