@@ -41,7 +41,7 @@ In addition, all the hashes' keys are [kept in a sorted set](https://github.com/
 The app is a basic component that [loads the fraud detection pre-trained ML model](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/app_runner.py#L16) into RedisAI, along with a [TorchScript](https://oss.redis.com/redisai/intro/#scripting) which is used for pre-processing of the data. This model was built using Tensorflow, which is one of the three ML frameworks that RedisAI supports as backends.
 
 **Multiple devices:** RedisAI allows executing operation in parallel on different logical devices. Hence, the fraud-detection model is loaded twice under two different keys: 1)`fraud_detection_model{tag}_CPU` will be associated with `CPU`, and 2)`fraud_detection_model{tag}_CPU:1`, will be associated with `CPU:1`.
-Side note - If your have a multiple GPU machine with Nvidia CUDA support, it is a good practice to load models that can run in parallel and associate each one with a different device (for example: `fraud_detection_model{tag}_GPU:0` and `fraud_detection_model{tag}_GPU:1`), for gaining better utilization of GPU resources.
+Side note - If your have a multiple GPU machine with Nvidia CUDA support, you can load models that can run in parallel and associate each one with a different device (for example: `fraud_detection_model{tag}_GPU:0` and `fraud_detection_model{tag}_GPU:1`), for gaining better utilization of GPU resources.
 
 ### RedisInsight
 [RedisInsight](https://redis.com/redis-enterprise/redis-insight/) is a desktop manager that provides an intuitive and efficient GUI for Redis, allowing you to interact with your databases, monitor, and manage your data. This demo bundles a RedisInsight container, to enable visualization and exploration of the data.  
