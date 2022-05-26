@@ -5,11 +5,11 @@
 
 # Fraud Detection Demo    
 
-This demo showcases the advantage of **data locality** during transaction scoring, by using [RedisAI](https://oss.redislabs.com/redisai/) module.
-It simulates a fraud-detection app which is based on ML model prediction in real-time. When a new transaction is executed, it triggers a flow whose output is the probability that this transaction is fraudulent. The prediction is based on both the given transaction and some reference data stored in Redis, while *the entire flow* is done within Redis as well.   
+This demo illustrates the key advantage of data locality using [RedisAI](https://oss.redislabs.com/redisai/). Generating a prediction from a real-time AI/ML model is a multi-step process. The steps typically include: receiving a prediction (inference) request, retrieving feature data (needed by the mode)l and running the inference request (feeding features into model). In general, these steps run in multiple processes/machines. In contrast, using Redis and the RedisAI module allows you store feature data and run the AI Model in Redis! The feature data is within easy reach of the model!
+This demo simulates a fraud-detection app, which relies on a ML model returning the probability that a given transaction is fraudulent. The model uses transaction data and reference (feature) data previously stored in Redis for the customers. The entire flow is executed within Redis.
 
 ## Running the Demo
-To run the demo app and load the data, run the following:
+To run the demo app and load the data, run the following commands:
 ```
 # If you don't have it already, install https://git-lfs.github.com/ (On OSX: brew install git-lfs)
 $ git lfs install && git lfs fetch && git lfs checkout
@@ -28,10 +28,10 @@ $ docker-compose up --force-recreate --build
 
 ## Architecture
 ### RedisAI
-Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). RedisAI allows you to store and execute AI/ML pre-trained models in Redis.
+Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). RedisAI allows you to store and execute AI/ML pre-trained models in Redis. The models can be written in Pytorch, Tensorflow or any other ML framework (XGBoot, scikit-learn) allowing models to be exported to ONNX.
 
 ### [Data Loader](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py)
-Historical data of credit card transactions is loaded into Redis from [`data/creditcard.csv` file](https://media.githubusercontent.com/media/RedisAI/FraudDetectionDemo/master/dataloader/data/creditcard.csv), using redis-py (Redis' official python client). Every transaction is [stored in Redis](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L31) as a hash with the following structure:
+Historical feature data of credit card transactions is loaded into Redis from [`data/creditcard.csv` file](https://media.githubusercontent.com/media/RedisAI/FraudDetectionDemo/master/dataloader/data/creditcard.csv), using redis-py (Redis' official python client). Every transaction is [stored in Redis](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L31) as a hash with the following structure:
 - The key is `<time_stamp>_<index>{tag}`, where `<index>` is used to differentiate between keys which correspond to transactions that have occurred in the same timestamp, and `{tag}` is used to ensure that all hashes are stored in the same shard (when using clustered environment). 
 - The hash value is a dictionary that contains 29 numeric features ("v0", "v1", ... "v28") that represent the transaction, and another field ("amount") specifying the amount of money to transfer in the transaction.
 
