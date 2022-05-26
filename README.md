@@ -31,7 +31,7 @@ $ docker-compose up --force-recreate --build
 Redis instance is launched with RedisAI module loaded (by running `redislabs/redisai:latest` docker). RedisAI allows you to store and execute AI/ML pre-trained models in Redis. The models can be written in Pytorch, Tensorflow or any other ML framework (XGBoot, scikit-learn) allowing models to be exported to ONNX.
 
 ### [Data Loader](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py)
-Historical feature data of credit card transactions is loaded into Redis from [`data/creditcard.csv` file](https://media.githubusercontent.com/media/RedisAI/FraudDetectionDemo/master/dataloader/data/creditcard.csv), using redis-py (Redis' official python client). Every transaction is [stored in Redis](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L31) as a hash with the following structure:
+Historical data of credit card transactions processed into features is loaded into Redis from [`data/creditcard.csv` file](https://media.githubusercontent.com/media/RedisAI/FraudDetectionDemo/master/dataloader/data/creditcard.csv), using redis-py (Redis' official python client). Every transaction is [stored in Redis](https://github.com/RedisAI/FraudDetectionDemo/blob/master/dataloader/load.py#L31) as a hash with the following structure:
 - The key is `<time_stamp>_<index>{tag}`, where `<index>` is used to differentiate between keys which correspond to transactions that have occurred in the same timestamp, and `{tag}` is used to ensure that all hashes are stored in the same shard (when using clustered environment). 
 - The hash value is a dictionary that contains 29 numeric features ("v0", "v1", ... "v28") that represent the transaction, and another field ("amount") specifying the amount of money to transfer in the transaction.
 
@@ -40,7 +40,7 @@ In addition, all the hashes' keys are [kept in a sorted set](https://github.com/
 ### [App](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/app_runner.py)
 The app is a basic component that [loads the fraud detection pre-trained ML model](https://github.com/RedisAI/FraudDetectionDemo/blob/master/app/app_runner.py#L16) into RedisAI, along with a [TorchScript](https://oss.redis.com/redisai/intro/#scripting) which is used for pre-processing of the data. This model was built using Tensorflow, which is one of the three ML frameworks that RedisAI supports as backends.
 
-**Multiple devices:** RedisAI allows executing operation in parallel on different logical devices. Hence, the fraud-detection model is loaded twice under two different keys: 1)`fraud_detection_model{tag}_CPU` will be associated with `CPU`, and 2)`fraud_detection_model{tag}_CPU:1`, will be associated with `CPU:1`.
+**Multiple devices:** RedisAI allows parallel execution of models on different logical devices. In this demo, the fraud detection model is loaded on 2 logical devices under two different keys: 1)`fraud_detection_model{tag}_CPU` will be associated with `CPU`, and 2)`fraud_detection_model{tag}_CPU:1`, will be associated with `CPU:1`.
 Side note - If your have a multiple GPU machine with Nvidia CUDA support, you can load models that can run in parallel and associate each one with a different device (for example: `fraud_detection_model{tag}_GPU:0` and `fraud_detection_model{tag}_GPU:1`), for gaining better utilization of GPU resources.
 
 ### RedisInsight
